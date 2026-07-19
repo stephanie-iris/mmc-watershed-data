@@ -1,0 +1,21 @@
+[build-system]
+requires = []
+build-backend = "build_backend"
+backend-path = ["."]
+
+[project]
+name = "mmc-watershed-data"
+version = "0.1.0"
+description = "Collect Auburn Ogletree rainfall data and save raw and processed outputs."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+mmc = "mmc_watershed_data.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
