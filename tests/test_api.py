@@ -1,7 +1,10 @@
 from datetime import datetime
 from pathlib import Path
 import sys
+from io import StringIO
+from contextlib import redirect_stdout
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -9,6 +12,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from mmc_watershed_data import cli
 from mmc_watershed_data.api import build_body, build_windows, dedupe_and_sort, fetch_window
 from mmc_watershed_data.config import AppConfig
 from mmc_watershed_data.models import DownloadWindow, RainRecord
@@ -88,6 +92,15 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(payload["value"]["records"][0]["datum"]["valid"][0][1], 0.12)
         self.assertEqual(records[0].rain_in, 0.12)
         self.assertEqual(records[1].timestamp_local, datetime(2025, 12, 31, 19, 0))
+
+    def test_version_flag_prints_version(self) -> None:
+        buffer = StringIO()
+        with patch.object(sys, "argv", ["mmc", "--version"]), redirect_stdout(buffer):
+            with self.assertRaises(SystemExit) as exc:
+                cli.parse_args()
+
+        self.assertEqual(exc.exception.code, 0)
+        self.assertEqual(buffer.getvalue().strip(), "mmc 0.1.0")
 
 
 if __name__ == "__main__":

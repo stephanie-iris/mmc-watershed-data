@@ -2,6 +2,8 @@
 
 MMC stands for Moores Mill Creek. This project is a small `uv`-managed Python command-line tool that collects precipitation data for the City of Auburn from the Ogletree station.
 
+Current version: `0.1.0`
+
 ## API
 
 The tool uses the LI-COR cloud timeseries endpoint shown on this dashboard page:

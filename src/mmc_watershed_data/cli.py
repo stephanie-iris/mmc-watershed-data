@@ -6,11 +6,17 @@ from pathlib import Path
 
 from .api import build_windows, dedupe_and_sort, fetch_window, save_raw_payload
 from .config import AppConfig, project_root
+from . import __version__
 from .storage import ensure_output_dirs, write_processed_csv
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Collect Auburn Ogletree rainfall data.")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"mmc {__version__}",
+    )
     parser.add_argument("--start-date", required=True, help="Start date in YYYY-MM-DD format.")
     parser.add_argument("--end-date", required=True, help="End date in YYYY-MM-DD format.")
     return parser.parse_args()
