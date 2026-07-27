@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 
 NAME = "mmc-watershed-data"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 DIST_INFO = f"mmc_watershed_data-{VERSION}.dist-info"
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src" / "mmc_watershed_data"

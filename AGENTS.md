@@ -4,9 +4,10 @@
 
 - This project is a `uv`-managed Python command-line tool.
 - The main command is `mmc`.
-- Raw API responses belong in `data/raw/`.
-- Processed datasets belong in `data/processed/`.
-- The example script in `examples/` documents the original request pattern.
+- Auburn outputs belong in `data/raw/auburn/` and `data/processed/auburn/`.
+- Opelika outputs belong in `data/raw/opelika/` and `data/processed/opelika/`.
+- CSV is the standard output format for both raw and processed data.
+- The example scripts in `examples/` document the Auburn and Opelika request patterns.
 
 ## Coding Guidance
 
