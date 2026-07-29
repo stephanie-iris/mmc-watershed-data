@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import argparse
 from datetime import date
+import logging
+from pathlib import Path
 
 from . import __version__
-from .auburn import collect_all as collect_auburn
 from .config import project_root
 from .models import StationFailure, StationResult
-from .opelika import collect_all as collect_opelika
+from .logging_config import LoggingSetupError, configure_logging
+from .workflow import CollectionRequest, collect_rainfall
+
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
@@ -15,6 +20,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--version", action="version", version=f"mmc {__version__}")
     parser.add_argument("--start-date", required=True, help="Start date in YYYY-MM-DD format.")
     parser.add_argument("--end-date", required=True, help="End date in YYYY-MM-DD format.")
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Write operational INFO messages to the terminal.",
+    )
+    parser.add_argument(
+        "--log-file",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="Write detailed DEBUG logs to PATH.",
+    )
     return parser.parse_args()
 
 
@@ -67,19 +84,47 @@ def print_summary(
 
 def main() -> int:
     args = parse_args()
-    start_date = parse_date(args.start_date)
-    end_date = parse_date(args.end_date)
-    if start_date > end_date:
-        raise SystemExit("--start-date must be earlier than or equal to --end-date")
+    try:
+        configure_logging(verbose=args.verbose, log_file=args.log_file)
+    except LoggingSetupError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    try:
+        request = CollectionRequest(
+            start_date=parse_date(args.start_date),
+            end_date=parse_date(args.end_date),
+        )
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     root = project_root()
-    print_banner(start_date, end_date)
+    print_banner(request.start_date, request.end_date)
+    logger.info(
+        "Starting MMC collection for %s through %s.",
+        request.start_date,
+        request.end_date,
+    )
 
-    auburn_results, auburn_failures = collect_auburn(start_date, end_date, root)
+    collection = collect_rainfall(request, root)
+    auburn_results = [
+        result for result in collection.station_results if result.station.city == "Auburn"
+    ]
+    auburn_failures = [
+        failure for failure in collection.station_failures if failure.station.city == "Auburn"
+    ]
     print_city_results("Auburn", auburn_results, auburn_failures)
 
-    opelika_results, opelika_failures = collect_opelika(start_date, end_date, root)
+    opelika_results = [
+        result for result in collection.station_results if result.station.city == "Opelika"
+    ]
+    opelika_failures = [
+        failure for failure in collection.station_failures if failure.station.city == "Opelika"
+    ]
     print_city_results("Opelika", opelika_results, opelika_failures)
 
-    print_summary(auburn_results + opelika_results, auburn_failures + opelika_failures)
+    print_summary(
+        list(collection.station_results),
+        list(collection.station_failures),
+    )
+    logger.info("MMC collection finished.")
     return 0

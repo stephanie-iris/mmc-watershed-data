@@ -11,4 +11,5 @@ wheels/
 
 # Generated data
 data/
+logs/
 examples/

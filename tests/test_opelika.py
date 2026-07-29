@@ -15,6 +15,7 @@ if str(SRC) not in sys.path:
 
 from mmc_watershed_data.models import Station
 from mmc_watershed_data.opelika import collect_station
+from mmc_watershed_data.validation import MmcDataValidationError
 
 
 class OpelikaTests(unittest.TestCase):
@@ -51,6 +52,28 @@ class OpelikaTests(unittest.TestCase):
             self.assertIn("CreatedDT,RainToday", raw_text)
             self.assertIn("Date_hour,RainIn", processed_text)
             self.assertIn("2026-01-01 02:00:00,0.2", processed_text)
+
+    def test_invalid_payload_keeps_raw_json_evidence(self) -> None:
+        station = Station("opelika", "Opelika", "sportsplex", "Sportsplex", "236")
+        payload = [{"CreatedDT": "bad-date", "RainToday": 0.2}]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch("mmc_watershed_data.opelika.get_json", return_value=payload), patch(
+                "mmc_watershed_data.opelika.time_module.sleep"
+            ):
+                with self.assertRaises(MmcDataValidationError):
+                    collect_station(
+                        station,
+                        date(2026, 1, 1),
+                        date(2026, 1, 1),
+                        root / "raw",
+                        root / "processed",
+                    )
+
+            raw_path = root / "raw" / "sportsplex_2026-01-01_to_2026-01-01_raw.json"
+            self.assertTrue(raw_path.exists())
+            self.assertIn("bad-date", raw_path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

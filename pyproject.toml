@@ -5,11 +5,13 @@ backend-path = ["."]
 
 [project]
 name = "mmc-watershed-data"
-version = "0.2.0"
+version = "0.3.0"
 description = "Collect Auburn Ogletree rainfall data and save raw and processed outputs."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pydantic>=2.13.4",
+]
 
 [project.scripts]
 mmc = "mmc_watershed_data.cli:main"
@@ -19,3 +21,8 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[dependency-groups]
+dev = [
+    "coverage>=7.15.2",
+]

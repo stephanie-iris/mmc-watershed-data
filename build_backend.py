@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 
 NAME = "mmc-watershed-data"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 DIST_INFO = f"mmc_watershed_data-{VERSION}.dist-info"
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src" / "mmc_watershed_data"
@@ -45,6 +45,7 @@ def prepare_metadata_for_build_wheel(metadata_directory, config_settings=None):
                 f"Name: {NAME}",
                 f"Version: {VERSION}",
                 "Summary: Collect Auburn Ogletree rainfall data",
+                "Requires-Dist: pydantic>=2.13.4",
                 "",
             ]
         ),
@@ -93,6 +94,7 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
                 f"Name: {NAME}",
                 f"Version: {VERSION}",
                 "Summary: Collect Auburn Ogletree rainfall data",
+                "Requires-Dist: pydantic>=2.13.4",
                 "",
             ]
         ).encode("utf-8")
@@ -154,6 +156,7 @@ def build_editable(wheel_directory, config_settings=None, metadata_directory=Non
                 f"Name: {NAME}",
                 f"Version: {VERSION}",
                 "Summary: Collect Auburn Ogletree rainfall data",
+                "Requires-Dist: pydantic>=2.13.4",
                 "",
             ]
         ).encode("utf-8")

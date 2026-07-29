@@ -1,0 +1,11 @@
+{
+  "value": {
+    "records": [
+      {
+        "datum": {
+          "valid": [["not-an-epoch", 0.12]]
+        }
+      }
+    ]
+  }
+}

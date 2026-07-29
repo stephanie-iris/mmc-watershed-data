@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0 - 2026-07-28
+
+Added the Sprint 3 reliability layer to make collection behavior easier to
+validate, test offline, diagnose, and reuse in the future dashboard.
+
+- Added Pydantic validation for the Auburn and Opelika response fields used by the project.
+- Added valid and invalid fixtures for controlled success and failure tests.
+- Added mocked network tests for successful requests, failures, and retries without live API calls.
+- Added a shared collection workflow for the CLI and future Streamlit dashboard.
+- Added optional `--verbose` console logging and `--log-file` diagnostic logging.
+- Preserved raw JSON evidence before processed-data validation failures whenever possible.
+- Documented the new validation, fixture, mock, workflow, and logging behavior in the README.
+
 ## 0.2.0 - 2026-07-27
 
 Expanded the tool from a single Auburn station in `0.1.0` to a multi-station downloader for Auburn and Opelika.

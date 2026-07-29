@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time as time_module
 from datetime import UTC, date, datetime, time, timedelta, timezone
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ from .stations import (
     AUBURN_STATIONS,
 )
 from .storage import write_csv, write_json
+from .validation import validate_auburn_payload
 
 
 FIXED_UTC_MINUS_6 = timezone(timedelta(hours=-6))
@@ -21,6 +23,7 @@ CHUNK_DAYS = 7
 LIMIT = 10000
 MAX_RETRIES = 3
 REQUEST_DELAY_SECONDS = 0.4
+logger = logging.getLogger(__name__)
 
 
 def build_headers() -> dict[str, str]:
@@ -70,10 +73,10 @@ def _build_body(station: Station, start_utc: datetime, end_utc: datetime) -> dic
 
 
 def _extract_raw_rows(payload: dict[str, Any], station: Station) -> list[dict[str, Any]]:
+    validated_payload = validate_auburn_payload(payload)
     rows: list[dict[str, Any]] = []
-    records = payload.get("value", {}).get("records", [])
-    for record in records:
-        for timestamp_ms, value in record.get("datum", {}).get("valid", []):
+    for record in validated_payload.value.records:
+        for timestamp_ms, value in record.datum.valid:
             rows.append(
                 {
                     "city": station.city,
@@ -133,6 +136,13 @@ def collect_station(
         payload: dict[str, Any] | None = None
         for attempt in range(1, MAX_RETRIES + 1):
             try:
+                logger.info(
+                    "Requesting Auburn station %s for %s through %s (attempt %d).",
+                    station.name,
+                    window_start,
+                    window_end,
+                    attempt,
+                )
                 payload = post_json(
                     AUBURN_API_URL,
                     _build_body(station, *_local_day_window(window_start, window_end)),
@@ -141,6 +151,12 @@ def collect_station(
                 break
             except Exception as exc:  # noqa: BLE001
                 last_error = str(exc)
+                logger.warning(
+                    "Auburn request failed for %s on attempt %d: %s",
+                    station.name,
+                    attempt,
+                    exc,
+                )
                 if attempt < MAX_RETRIES:
                     time_module.sleep(attempt)
         if payload is None:
@@ -152,10 +168,7 @@ def collect_station(
                 "payload": payload,
             }
         )
-        raw_rows.extend(_extract_raw_rows(payload, station))
         time_module.sleep(REQUEST_DELAY_SECONDS)
-
-    processed_rows = _convert_processed_rows(raw_rows, station)
 
     raw_json_path = raw_dir / f"{station.key}_{start_date.isoformat()}_to_{end_date.isoformat()}_raw.json"
     raw_csv_path = raw_dir / f"{station.key}_{start_date.isoformat()}_to_{end_date.isoformat()}_raw.csv"
@@ -177,8 +190,15 @@ def collect_station(
             "windows": raw_windows,
         },
     )
+    logger.info("Saved Auburn raw JSON evidence to %s.", raw_json_path)
+
+    for raw_window in raw_windows:
+        raw_rows.extend(_extract_raw_rows(raw_window["payload"], station))
+
+    processed_rows = _convert_processed_rows(raw_rows, station)
     write_csv(raw_csv_path, raw_rows, raw_fieldnames)
     write_csv(processed_path, processed_rows, processed_fieldnames)
+    logger.info("Saved Auburn raw and processed CSV files for %s.", station.name)
 
     return StationResult(
         station=station,
