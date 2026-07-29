@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 - 2026-07-29
+
+Added the Sprint 4 Streamlit dashboard and refined its user-facing behavior.
+
+- Added the MMC Watershed Rainfall Dashboard with rainfall observation and event analysis pages.
+- Added street-map visualization with Auburn and Opelika station colors.
+- Added the Moores Mill Creek watershed boundary and station KMZ integration.
+- Added station selection, rainfall bar charts, event summaries, and event station participation.
+- Added automatic dashboard refresh after collecting a new API period.
+- Renamed dashboard and project-facing geographic terminology from basin to watershed.
+
 ## 0.3.0 - 2026-07-28
 
 Added the Sprint 3 reliability layer to make collection behavior easier to

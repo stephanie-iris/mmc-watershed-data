@@ -1,0 +1,3 @@
+city,station_key,station_name,Date_hour,RainIn
+Auburn,lake_ogletree,Lake Ogletree,2026-01-01 00:00:00,0.1
+Auburn,lake_ogletree,Lake Ogletree,2026-01-01 00:10:00,0.25

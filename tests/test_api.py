@@ -51,7 +51,7 @@ class ApiTests(unittest.TestCase):
                 cli.parse_args()
 
         self.assertEqual(exc.exception.code, 0)
-        self.assertEqual(buffer.getvalue().strip(), "mmc 0.3.0")
+        self.assertEqual(buffer.getvalue().strip(), "mmc 0.4.0")
 
 
 if __name__ == "__main__":

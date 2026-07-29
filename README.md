@@ -2,7 +2,7 @@
 
 MMC stands for Moores Mill Creek. This project is a small `uv`-managed Python command-line tool that collects precipitation data from the City of Auburn and the City of Opelika. The collection workflow validates external responses before processing them and can provide optional diagnostic logs when troubleshooting.
 
-Current version: `0.3.0`
+Current version: `0.4.0`
 
 ## API
 
@@ -88,10 +88,36 @@ validation, storage, and failure behavior.
 
 The current implementation is the second-sprint multi-station rainfall downloader plus the Sprint 3 reliability layer. The command remains simple: the user only chooses the time period, while the project handles station selection, validation, storage, and diagnostics.
 
+## Dashboard
+
+Sprint 4 adds a Streamlit dashboard that reuses the same collection and
+validation workflow as the `mmc` command. Start it with:
+
+```bash
+uv run streamlit run src/mmc_watershed_data/dashboard.py
+```
+
+The dashboard has two pages:
+
+- **Rainfall Observation**: choose a date range and stations, collect data or load saved processed CSVs, inspect a street map, and view one rainfall bar chart per selected station.
+- **Event Analysis**: see the number of rainfall events, the longest event, total event precipitation, event duration, and the stations that recorded each event.
+
+The map uses OpenStreetMap street tiles. Auburn stations and Opelika stations
+use different colors, and the watershed boundary comes from
+`assets/geospatial/watershed/mmc_boundary.kmz`. Station locations come from the
+city KMZ files in `assets/geospatial/stations/`.
+
+For event analysis, a positive `RainIn` observation indicates rainfall. Positive
+observations are grouped when consecutive station readings are within one hour;
+station events that overlap or are within the same tolerance are merged into a
+regional event. Event precipitation is the sum of processed interval values,
+and the event station list includes every station that contributed positive
+rainfall.
+
 ## Setup
 
 1. Install `uv` if it is not already available.
-2. Synchronize the project environment with `uv sync`. This installs Pydantic and the project itself.
+2. Synchronize the project environment with `uv sync`. This installs Pydantic, Streamlit, Folium, and the project itself.
 
 ## Run
 
