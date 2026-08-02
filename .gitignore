@@ -15,3 +15,5 @@ htmlcov/
 data/
 logs/
 examples/
+.coverage
+.ipynb_checkpoints/
