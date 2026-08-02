@@ -1,3 +1,5 @@
+"""Provider endpoints and configured Auburn and Opelika station metadata."""
+
 from __future__ import annotations
 
 from .models import Station

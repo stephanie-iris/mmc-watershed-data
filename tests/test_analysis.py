@@ -28,12 +28,18 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(records[0].station_name, "Lake Ogletree")
         self.assertAlmostEqual(records[1].rain_in, 0.25)
 
-    def test_detect_events_merges_station_observations_and_tracks_stations(self) -> None:
+    def test_detect_events_merges_station_observations_and_tracks_stations(
+        self,
+    ) -> None:
         start = datetime(2026, 1, 1, 0, 0)
         records = [
             RainfallRecord("Auburn", "a", "Auburn A", start, 0.1),
-            RainfallRecord("Auburn", "a", "Auburn A", start + timedelta(minutes=10), 0.2),
-            RainfallRecord("Opelika", "b", "Opelika B", start + timedelta(minutes=30), 0.3),
+            RainfallRecord(
+                "Auburn", "a", "Auburn A", start + timedelta(minutes=10), 0.2
+            ),
+            RainfallRecord(
+                "Opelika", "b", "Opelika B", start + timedelta(minutes=30), 0.3
+            ),
             RainfallRecord("Auburn", "a", "Auburn A", start + timedelta(hours=3), 0.4),
         ]
 

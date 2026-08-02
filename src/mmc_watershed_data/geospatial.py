@@ -13,6 +13,8 @@ KML_NAMESPACE = "{http://www.opengis.net/kml/2.2}"
 
 @dataclass(frozen=True)
 class StationPoint:
+    """Map-ready station location with its city and project identity."""
+
     city: str
     station_key: str
     station_name: str
@@ -30,7 +32,9 @@ def load_station_points(root: Path) -> tuple[StationPoint, ...]:
         ("Auburn", "auburn_stations.kmz", AUBURN_STATIONS),
         ("Opelika", "opelika_stations.kmz", OPELIKA_STATIONS),
     ):
-        placemarks = _placemarks(_read_kml(root / "assets" / "geospatial" / "stations" / filename))
+        placemarks = _placemarks(
+            _read_kml(root / "assets" / "geospatial" / "stations" / filename)
+        )
         by_name = {
             name: coordinates
             for name, coordinates in placemarks
@@ -38,7 +42,9 @@ def load_station_points(root: Path) -> tuple[StationPoint, ...]:
         }
         for station in stations:
             if station.name not in by_name:
-                raise ValueError(f"Station {station.name!r} was not found in {filename}.")
+                raise ValueError(
+                    f"Station {station.name!r} was not found in {filename}."
+                )
             latitude, longitude = by_name[station.name]
             points.append(
                 StationPoint(
@@ -68,11 +74,15 @@ def load_watershed_boundary(root: Path) -> tuple[tuple[float, float], ...]:
 
 
 def _read_kml(path: Path) -> bytes:
+    """Read ``doc.kml`` from a KMZ archive or propagate an asset error."""
+
     with ZipFile(path) as archive:
         return archive.read("doc.kml")
 
 
 def _placemarks(kml: bytes) -> list[tuple[str, tuple[float, float] | None]]:
+    """Extract named point placemarks as latitude/longitude pairs."""
+
     root = ElementTree.fromstring(kml)
     result: list[tuple[str, tuple[float, float] | None]] = []
     for placemark in root.findall(f".//{KML_NAMESPACE}Placemark"):
@@ -91,6 +101,8 @@ def _placemarks(kml: bytes) -> list[tuple[str, tuple[float, float] | None]]:
 
 
 def _parse_coordinate_pairs(text: str) -> list[tuple[float, float]]:
+    """Parse KML longitude,latitude[,altitude] tokens into map coordinates."""
+
     pairs: list[tuple[float, float]] = []
     for coordinate in text.split():
         values = coordinate.split(",")
@@ -102,4 +114,6 @@ def _parse_coordinate_pairs(text: str) -> list[tuple[float, float]]:
 
 
 def _local_name(tag: str) -> str:
+    """Return an XML tag name without its optional namespace."""
+
     return tag.rsplit("}", 1)[-1]

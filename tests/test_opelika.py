@@ -48,7 +48,7 @@ class OpelikaTests(unittest.TestCase):
             raw_text = result.raw_csv_path.read_text(encoding="utf-8")
             raw_json = result.raw_json_path.read_text(encoding="utf-8")
             processed_text = result.processed_path.read_text(encoding="utf-8")
-            self.assertIn("\"request\"", raw_json)
+            self.assertIn('"request"', raw_json)
             self.assertIn("CreatedDT,RainToday", raw_text)
             self.assertIn("Date_hour,RainIn", processed_text)
             self.assertIn("2026-01-01 02:00:00,0.2", processed_text)
@@ -59,8 +59,9 @@ class OpelikaTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            with patch("mmc_watershed_data.opelika.get_json", return_value=payload), patch(
-                "mmc_watershed_data.opelika.time_module.sleep"
+            with (
+                patch("mmc_watershed_data.opelika.get_json", return_value=payload),
+                patch("mmc_watershed_data.opelika.time_module.sleep"),
             ):
                 with self.assertRaises(MmcDataValidationError):
                     collect_station(

@@ -39,6 +39,8 @@ CITY_COLORS = {"Auburn": "#1f77b4", "Opelika": "#d62728"}
 
 
 def main() -> None:
+    """Render the Streamlit pages using the shared collection and analysis code."""
+
     """Render the dashboard and keep all collection logic in the shared workflow."""
 
     st.set_page_config(page_title="MMC Watershed Rainfall Dashboard", layout="wide")
@@ -56,12 +58,18 @@ def main() -> None:
 
     _show_dashboard_notice()
 
-    page = st.sidebar.radio("Dashboard page", ("Rainfall Observation", "Event Analysis"))
+    page = st.sidebar.radio(
+        "Dashboard page", ("Rainfall Observation", "Event Analysis")
+    )
     records = st.session_state.get("rainfall_records", [])
-    selected_records = [record for record in records if record.station_key in selected_keys]
+    selected_records = [
+        record for record in records if record.station_key in selected_keys
+    ]
 
     if not records:
-        st.info("Select a date range and collect data or load an existing processed period.")
+        st.info(
+            "Select a date range and collect data or load an existing processed period."
+        )
         return
 
     if page == "Rainfall Observation":
@@ -71,6 +79,8 @@ def main() -> None:
 
 
 def _render_controls() -> tuple[CollectionRequest, set[str], str | None]:
+    """Render date and station controls and return the current user choices."""
+
     today = date.today()
     with st.sidebar:
         st.header("Data selection")
@@ -81,14 +91,18 @@ def _render_controls() -> tuple[CollectionRequest, set[str], str | None]:
             end_date = start_date
 
         options = [station.key for station in ALL_STATIONS]
-        labels = {station.key: f"{station.city}: {station.name}" for station in ALL_STATIONS}
+        labels = {
+            station.key: f"{station.city}: {station.name}" for station in ALL_STATIONS
+        }
         selected = st.multiselect(
             "Stations to analyze",
             options=options,
             default=options,
             format_func=lambda key: labels[key],
         )
-        collect_clicked = st.button("Collect from APIs", type="primary", use_container_width=True)
+        collect_clicked = st.button(
+            "Collect from APIs", type="primary", use_container_width=True
+        )
         load_clicked = st.button("Load saved CSVs", use_container_width=True)
 
     request = CollectionRequest(start_date=start_date, end_date=end_date)
@@ -97,6 +111,8 @@ def _render_controls() -> tuple[CollectionRequest, set[str], str | None]:
 
 
 def _collect_for_dashboard(request: CollectionRequest, root: Path) -> None:
+    """Collect a period, store typed records, and request an immediate refresh."""
+
     try:
         with st.spinner("Collecting, validating, and saving rainfall data..."):
             result = collect_rainfall(request, root)
@@ -108,7 +124,9 @@ def _collect_for_dashboard(request: CollectionRequest, root: Path) -> None:
                 f"Loaded new data, but {len(result.station_failures)} station(s) could not be loaded.",
             )
         else:
-            _set_dashboard_notice("success", f"Loaded {len(records)} processed observations.")
+            _set_dashboard_notice(
+                "success", f"Loaded {len(records)} processed observations."
+            )
         st.rerun()
     except Exception as exc:  # noqa: BLE001
         logger.exception("Dashboard collection failed.")
@@ -116,6 +134,8 @@ def _collect_for_dashboard(request: CollectionRequest, root: Path) -> None:
 
 
 def _load_saved_for_dashboard(request: CollectionRequest, root: Path) -> None:
+    """Load matching processed CSVs and request an immediate chart refresh."""
+
     records: list[RainfallRecord] = []
     paths: list[Path] = []
     for station in ALL_STATIONS:
@@ -134,11 +154,15 @@ def _load_saved_for_dashboard(request: CollectionRequest, root: Path) -> None:
         st.error("No processed CSVs were found for the selected period.")
         return
     _store_dashboard_data(request, records, paths)
-    _set_dashboard_notice("success", f"Loaded {len(records)} saved processed observations.")
+    _set_dashboard_notice(
+        "success", f"Loaded {len(records)} saved processed observations."
+    )
     st.rerun()
 
 
 def _records_from_results(result: CollectionResult) -> list[RainfallRecord]:
+    """Load typed records from the successful processed station outputs."""
+
     records: list[RainfallRecord] = []
     for station_result in result.station_results:
         records.extend(load_rainfall_records(station_result.processed_path))
@@ -150,6 +174,8 @@ def _store_dashboard_data(
     records: list[RainfallRecord],
     evidence: CollectionResult | list[Path],
 ) -> None:
+    """Store records and evidence paths in Streamlit session state."""
+
     st.session_state["rainfall_request"] = request
     st.session_state["rainfall_records"] = records
     st.session_state["rainfall_evidence"] = evidence
@@ -160,8 +186,12 @@ def _render_observation(
     selected_keys: set[str],
     records: list[RainfallRecord],
 ) -> None:
+    """Render station selection, map, summaries, and rainfall charts."""
+
     st.header("Rainfall Observation")
-    selected_stations = [station for station in ALL_STATIONS if station.key in selected_keys]
+    selected_stations = [
+        station for station in ALL_STATIONS if station.key in selected_keys
+    ]
     if not selected_stations:
         st.warning("Select at least one station in the sidebar.")
         return
@@ -169,7 +199,9 @@ def _render_observation(
     try:
         station_points = load_station_points(root)
         boundary = load_watershed_boundary(root)
-        st_folium(_build_map(station_points, boundary), height=500, use_container_width=True)
+        st_folium(
+            _build_map(station_points, boundary), height=500, use_container_width=True
+        )
     except (OSError, ValueError, KeyError) as exc:
         logger.exception("Could not render the geospatial layers.")
         st.error(f"The station map could not be loaded: {exc}")
@@ -203,11 +235,17 @@ def _render_observation(
 
 
 def _render_event_analysis(records: list[RainfallRecord]) -> None:
+    """Render event counts, rankings, durations, totals, and station lists."""
+
     st.header("Event Analysis")
-    st.caption("Positive observations are grouped using a one-hour station and regional tolerance.")
+    st.caption(
+        "Positive observations are grouped using a one-hour station and regional tolerance."
+    )
     events = detect_events(records)
     if not events:
-        st.info("No positive-rainfall events were found for the selected stations and period.")
+        st.info(
+            "No positive-rainfall events were found for the selected stations and period."
+        )
         return
 
     longest = max(events, key=lambda event: event.duration_minutes)
@@ -235,6 +273,8 @@ def _build_map(
     station_points: Iterable[StationPoint],
     boundary: tuple[tuple[float, float], ...],
 ) -> folium.Map:
+    """Build an OpenStreetMap view with city-colored stations and boundary."""
+
     points = list(station_points)
     center = (
         sum(point.latitude for point in points) / len(points),
@@ -275,18 +315,24 @@ def _build_map(
       <span style="color: #2ca02c;">&#9644;</span> Watershed boundary
     </div>
     """
-    station_map.get_root().html.add_child(folium.Element(legend))
+    station_map.get_root().html.add_child(folium.Element(legend))  # type: ignore[attr-defined]
     return station_map
 
 
 def _station_totals(records: Iterable[RainfallRecord]) -> dict[str, float]:
+    """Sum processed interval rainfall by station key."""
+
     totals: dict[str, float] = {}
     for record in records:
-        totals[record.station_key] = totals.get(record.station_key, 0.0) + record.rain_in
+        totals[record.station_key] = (
+            totals.get(record.station_key, 0.0) + record.rain_in
+        )
     return totals
 
 
 def _event_row(index: int, event: RainfallEvent) -> dict[str, object]:
+    """Convert one typed event into a dashboard table row."""
+
     return {
         "event": index,
         "start": event.start.strftime("%Y-%m-%d %H:%M"),
@@ -298,10 +344,14 @@ def _event_row(index: int, event: RainfallEvent) -> dict[str, object]:
 
 
 def _format_duration(event: RainfallEvent) -> str:
+    """Format an event duration in hours for a compact metric display."""
+
     return f"{event.duration_minutes / 60:.2f} h"
 
 
 def _render_evidence_links() -> None:
+    """Display the raw and processed paths associated with the current data."""
+
     evidence = st.session_state.get("rainfall_evidence")
     if isinstance(evidence, CollectionResult):
         with st.expander("Saved evidence files"):
@@ -316,10 +366,14 @@ def _render_evidence_links() -> None:
 
 
 def _set_dashboard_notice(level: str, message: str) -> None:
+    """Queue a success or warning message for the next Streamlit render."""
+
     st.session_state["dashboard_notice"] = (level, message)
 
 
 def _show_dashboard_notice() -> None:
+    """Render and clear the queued dashboard notice, if one exists."""
+
     notice = st.session_state.pop("dashboard_notice", None)
     if notice is None:
         return

@@ -19,6 +19,8 @@ class CollectionRequest:
     end_date: date
 
     def __post_init__(self) -> None:
+        """Reject a reversed inclusive date window before network access."""
+
         if self.start_date > self.end_date:
             raise ValueError("start date must be earlier than or equal to end date")
 

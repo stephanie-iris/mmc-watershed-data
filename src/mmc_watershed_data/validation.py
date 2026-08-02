@@ -13,30 +13,40 @@ class MmcDataValidationError(ValueError):
 
 
 class AuburnDatum(BaseModel):
+    """Validated Auburn value container used by the project."""
+
     model_config = ConfigDict(extra="ignore")
 
     valid: list[tuple[int, float]] = Field(default_factory=list)
 
 
 class AuburnRecord(BaseModel):
+    """Validated Auburn record containing one datum block."""
+
     model_config = ConfigDict(extra="ignore")
 
     datum: AuburnDatum
 
 
 class AuburnValue(BaseModel):
+    """Validated Auburn response value containing provider records."""
+
     model_config = ConfigDict(extra="ignore")
 
     records: list[AuburnRecord] = Field(default_factory=list)
 
 
 class AuburnPayload(BaseModel):
+    """Validated top-level Auburn response fields consumed by MMC."""
+
     model_config = ConfigDict(extra="ignore")
 
     value: AuburnValue
 
 
 class OpelikaRecord(BaseModel):
+    """Validated Opelika timestamp and cumulative rainfall fields."""
+
     model_config = ConfigDict(
         extra="ignore",
         populate_by_name=True,
@@ -69,6 +79,8 @@ def validate_opelika_records(records: Any) -> list[OpelikaRecord]:
 
 
 def _as_domain_error(source: str, exc: ValidationError) -> MmcDataValidationError:
+    """Convert a Pydantic error into a concise source-specific exception."""
+
     first_problem = exc.errors(include_url=False)[0]
     location = ".".join(str(part) for part in first_problem["loc"])
     message = first_problem["msg"]

@@ -1,0 +1,466 @@
+---
+title: "MMC Watershed Rainfall Report"
+subtitle: "Rainfall observations for the Moores Mill Creek watershed"
+author: "MMC Watershed Data"
+date: today
+date-format: long
+abstract: |
+  MMC Watershed Data collects and standardizes rainfall observations from
+  Auburn and Opelika stations near the Moores Mill Creek watershed. This report
+  compares station totals and 10-minute rainfall patterns for one saved
+  collection selected at render time.
+format:
+  pdf:
+    toc: true
+    number-sections: true
+jupyter: python3
+execute:
+  echo: false
+  warning: false
+---
+
+```{python}
+#| label: prepare-report
+#| include: false
+
+from datetime import datetime, timedelta, timezone
+from importlib.metadata import version as package_version
+from pathlib import Path
+import platform
+
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+import pandas as pd
+from IPython.display import Markdown, display
+
+from mmc_watershed_data.geospatial import (
+    load_station_points,
+    load_watershed_boundary,
+)
+from mmc_watershed_data.reporting import load_report_dataset
+from mmc_watershed_data.stations import AUBURN_STATIONS, OPELIKA_STATIONS
+
+
+def find_project_root(start: Path) -> Path:
+    """Find the repository root from Quarto's execution directory."""
+
+    for candidate in (start, *start.parents):
+        if (candidate / "pyproject.toml").is_file():
+            return candidate
+    raise RuntimeError("Could not locate the MMC project root.")
+
+
+project_root = find_project_root(Path.cwd().resolve())
+dataset = load_report_dataset(project_root)
+
+frame = pd.DataFrame(
+    [
+        {
+            "city": record.city,
+            "station_key": record.station_key,
+            "station_name": record.station_name,
+            "timestamp": record.timestamp,
+            "rain_in": record.rain_in,
+        }
+        for record in dataset.records
+    ]
+)
+station_summary = (
+    frame.groupby(["city", "station_name"], as_index=False)
+    .agg(
+        total_rain_in=("rain_in", "sum"),
+        observations=("rain_in", "size"),
+        wet_observations=("rain_in", lambda values: int((values > 0).sum())),
+        maximum_interval_rain_in=("rain_in", "max"),
+    )
+    .sort_values(["total_rain_in", "station_name"], ascending=[False, True])
+)
+time_series_frame = frame.sort_values(
+    ["city", "station_name", "timestamp"]
+).reset_index(drop=True)
+winner = station_summary.iloc[0]
+period_label = (
+    f"{dataset.start_date:%B %d, %Y} through {dataset.end_date:%B %d, %Y}"
+)
+total_rainfall = float(station_summary["total_rain_in"].sum())
+winner_share = (
+    float(winner["total_rain_in"]) / total_rainfall if total_rainfall > 0 else 0.0
+)
+city_totals = station_summary.groupby("city")["total_rain_in"].sum().to_dict()
+configured_station_names = {
+    station.name for station in AUBURN_STATIONS + OPELIKA_STATIONS
+}
+represented_station_names = set(station_summary["station_name"])
+missing_station_names = sorted(configured_station_names - represented_station_names)
+coverage_sentence = (
+    "All configured stations are represented."
+    if not missing_station_names
+    else "No processed observations were available for "
+    + ", ".join(missing_station_names)
+    + "."
+)
+rendered_at = datetime.now(timezone.utc).replace(microsecond=0)
+station_points = load_station_points(project_root)
+watershed_boundary = load_watershed_boundary(project_root)
+chart_start = pd.Timestamp(dataset.start_date)
+chart_end = pd.Timestamp(dataset.end_date + timedelta(days=1))
+
+report_metadata = pd.DataFrame(
+    [
+        ("Selected input", dataset.selection),
+        ("Requested period", f"{dataset.start_date} through {dataset.end_date}"),
+        ("Processed station files", len(dataset.source_files)),
+        ("Validated observations", len(dataset.records)),
+        ("Stations represented", len(station_summary)),
+        ("Rainfall unit", "inches per processed interval"),
+        (
+            "Auburn source",
+            "https://www.licor.cloud/api/v2/timeseriesdata",
+        ),
+        (
+            "Opelika source",
+            "https://360.thormobile.net/thorcloud/api/weatherpacketsbyinterval",
+        ),
+        ("Project version", package_version("mmc-watershed-data")),
+        ("Python", platform.python_version()),
+        ("Rendered (UTC)", rendered_at.isoformat()),
+    ],
+    columns=["Field", "Recorded value"],
+)
+```
+
+# Purpose and reporting period
+
+```{python}
+#| label: reporting-scope
+#| output: asis
+
+display(
+    Markdown(
+        "**MMC Watershed Data** retrieves rainfall observations from the City "
+        "of Auburn LI-COR network and the City of Opelika THOR network, "
+        "preserves the API responses as evidence, validates their structure, "
+        "and converts them into comparable station CSVs. "
+        f"This report uses the **{dataset.selection}**, with the reporting "
+        f"period read from its saved processed CSV filenames. The selected "
+        f"period is **{period_label}**, with "
+        f"**{len(dataset.records):,} validated observations** from "
+        f"**{len(station_summary)} stations**. {coverage_sentence} It asks: "
+        f"**which station "
+        f"recorded the greatest total interval rainfall during this period, and "
+        f"how did rainfall vary among the represented stations?**"
+    )
+)
+```
+
+# Station and watershed location
+
+The Moores Mill Creek (MMC) watershed is the land area where surface runoff
+drains toward Moores Mill Creek. Its boundary defines the geographic area of
+interest for this project. Figure 1 places the configured Auburn and Opelika
+rainfall stations relative to that boundary: blue points are Auburn stations,
+red points are Opelika stations, and the green polygon is the watershed.
+
+Each station measures rainfall at one location. Stations inside and around the
+watershed help show how rainfall varies across the area, but an individual
+station value should not be interpreted as rainfall over the entire watershed.
+
+```{python}
+#| label: fig-station-map
+#| fig-cap: "Auburn and Opelika rainfall stations relative to the Moores Mill Creek watershed boundary."
+#| fig-alt: "Map showing the Moores Mill Creek watershed boundary and rainfall stations colored by city."
+#| fig-width: 7
+#| fig-height: 6
+#| fig-pos: H
+
+city_colors = {"Auburn": "#1f77b4", "Opelika": "#d62728"}
+boundary_latitudes = [latitude for latitude, _longitude in watershed_boundary]
+boundary_longitudes = [longitude for _latitude, longitude in watershed_boundary]
+fig, ax = plt.subplots(figsize=(7, 6))
+ax.fill(
+    boundary_longitudes,
+    boundary_latitudes,
+    color="#8fb996",
+    alpha=0.22,
+)
+ax.plot(
+    boundary_longitudes,
+    boundary_latitudes,
+    color="#2f6b3b",
+    linewidth=2,
+)
+for city in ("Auburn", "Opelika"):
+    city_points = [point for point in station_points if point.city == city]
+    ax.scatter(
+        [point.longitude for point in city_points],
+        [point.latitude for point in city_points],
+        color=city_colors[city],
+        edgecolor="white",
+        linewidth=0.7,
+        s=55,
+        zorder=3,
+    )
+    for point in city_points:
+        ax.annotate(
+            point.station_name,
+            (point.longitude, point.latitude),
+            xytext=(4, 4),
+            textcoords="offset points",
+            fontsize=7,
+        )
+ax.set_xlabel("Longitude")
+ax.set_ylabel("Latitude")
+ax.set_title("MMC watershed and rainfall station locations")
+ax.set_aspect("equal", adjustable="datalim")
+ax.grid(alpha=0.15)
+ax.legend(
+    handles=[
+        Line2D([0], [0], color="#2f6b3b", linewidth=2, label="MMC watershed"),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markerfacecolor=city_colors["Auburn"],
+            markeredgecolor="white",
+            markersize=7,
+            label="Auburn station",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markerfacecolor=city_colors["Opelika"],
+            markeredgecolor="white",
+            markersize=7,
+            label="Opelika station",
+        ),
+    ],
+    loc="best",
+)
+fig.tight_layout()
+plt.show()
+```
+
+# Data and method
+
+The report selects one complete processed collection using the date range
+encoded in MMC's station filenames. It always chooses the collection most
+recently written under `data/processed/`, so its period follows the latest API
+collection made with `mmc`. If no generated collection exists, the report uses
+the bundled dataset under `reports/data/` so the repository PDF remains
+reproducible offline.
+
+All records are loaded through `mmc_watershed_data.reporting`, which calls the
+project's typed `load_rainfall_records` function. The report does not recreate
+Auburn epoch conversion, Opelika cumulative-counter conversion, Pydantic
+validation, or API requests. Rainfall totals are sums of processed interval
+`RainIn` values in inches. The processed CSVs already contain one `RainIn`
+value per source observation at a nominal 10-minute cadence. The station
+time-series figures plot those rows directly at their saved `Date_hour`
+timestamps; the report does not resample or sum them into new time windows.
+
+# Results
+
+## Summary
+
+```{python}
+#| label: summary-answer
+#| output: asis
+
+display(
+    Markdown(
+        f"For **{period_label}**, **{winner['station_name']}** recorded the "
+        f"largest station total at **{winner['total_rain_in']:.2f} inches**. "
+        f"That represents **{winner_share:.1%}** of the sum across represented "
+        f"stations. Auburn stations contributed **{city_totals.get('Auburn', 0.0):.2f} "
+        f"inches** and Opelika stations contributed "
+        f"**{city_totals.get('Opelika', 0.0):.2f} inches** when station interval "
+        f"values are summed."
+    )
+)
+```
+
+## Station statistics
+
+```{python}
+#| label: tbl-station-totals
+#| tbl-cap: "Processed rainfall statistics by station for the selected reporting period."
+#| output: asis
+
+display(
+    Markdown(
+        station_summary.rename(
+            columns={
+                "city": "City",
+                "station_name": "Station",
+                "total_rain_in": "Total rain (in)",
+                "wet_observations": "Wet rows",
+                "maximum_interval_rain_in": "Max interval (in)",
+            }
+        )[
+            [
+                "Station",
+                "City",
+                "Total rain (in)",
+                "Wet rows",
+                "Max interval (in)",
+            ]
+        ].to_markdown(index=False, floatfmt=".2f")
+    )
+)
+```
+
+## Rainfall totals
+
+Blue bars identify Auburn stations and red bars identify Opelika stations,
+matching the city colors used by the dashboard. The legend makes that encoding
+explicit.
+
+```{python}
+#| label: fig-station-totals
+#| fig-cap: "Total processed interval rainfall by station for the selected reporting period."
+#| fig-alt: "Horizontal bar chart of total rainfall by station, with Auburn in blue and Opelika in red."
+#| fig-width: 7
+#| fig-height: 4.8
+#| fig-pos: H
+
+plot_data = station_summary.sort_values("total_rain_in")
+fig, ax = plt.subplots(figsize=(7, 4.8))
+bars = ax.barh(
+    plot_data["station_name"],
+    plot_data["total_rain_in"],
+    color=[city_colors[city] for city in plot_data["city"]],
+)
+ax.bar_label(bars, fmt="%.2f", padding=3, fontsize=8)
+ax.set_xlabel("Total processed interval rainfall (inches)")
+ax.set_ylabel("Station")
+ax.set_title(f"Station rainfall totals, {dataset.start_date} to {dataset.end_date}")
+ax.legend(
+    handles=[
+        Patch(color=city_colors["Auburn"], label="Auburn"),
+        Patch(color=city_colors["Opelika"], label="Opelika"),
+    ],
+    title="City",
+    loc="lower right",
+)
+ax.grid(axis="x", alpha=0.2)
+fig.tight_layout()
+plt.show()
+```
+
+## Rainfall at 10-minute intervals
+
+Each panel below represents one station over the full selected period. Every
+bar reports one `RainIn` value directly from the processed CSV; the shared
+horizontal scale makes the timing of rainfall comparable across stations.
+
+```{python}
+#| label: fig-auburn-interval-rainfall
+#| fig-cap: "Auburn processed rainfall observations at a nominal 10-minute cadence during the selected reporting period."
+#| fig-alt: "Stacked time-series bar charts showing 10-minute rainfall for each represented Auburn station."
+#| fig-width: 7
+#| fig-height: 8
+#| fig-pos: H
+
+def plot_station_intervals(city: str) -> None:
+    """Plot processed rainfall rows for each represented city station."""
+
+    city_data = time_series_frame.loc[time_series_frame["city"] == city]
+    station_names = sorted(city_data["station_name"].unique())
+    if not station_names:
+        display(Markdown(f"No processed {city} stations were available."))
+        return
+
+    fig, axes = plt.subplots(
+        len(station_names),
+        1,
+        figsize=(7, max(2.2 * len(station_names), 3.2)),
+        sharex=True,
+        squeeze=False,
+    )
+    for ax, station_name in zip(axes[:, 0], station_names, strict=True):
+        station_data = city_data.loc[city_data["station_name"] == station_name]
+        wet_data = station_data.loc[station_data["rain_in"] > 0]
+        ax.bar(
+            wet_data["timestamp"],
+            wet_data["rain_in"],
+            width=10 / (24 * 60),
+            color=city_colors[city],
+            align="center",
+        )
+        ax.set_ylabel("Rain (in)")
+        ax.set_title(station_name, loc="left", fontsize=9, fontweight="bold")
+        ax.set_xlim(chart_start, chart_end)
+        ax.grid(axis="y", alpha=0.2)
+
+    axes[-1, 0].set_xlabel("Observation time (fixed UTC-6 local time)")
+    axes[-1, 0].xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=8))
+    axes[-1, 0].xaxis.set_major_formatter(mdates.ConciseDateFormatter(
+        axes[-1, 0].xaxis.get_major_locator()
+    ))
+    fig.suptitle(f"{city} rainfall by station", fontweight="bold")
+    fig.tight_layout()
+    plt.show()
+
+
+plot_station_intervals("Auburn")
+```
+
+{{< pagebreak >}}
+
+```{python}
+#| label: fig-opelika-interval-rainfall
+#| fig-cap: "Opelika processed rainfall observations at a nominal 10-minute cadence during the selected reporting period."
+#| fig-alt: "Stacked time-series bar charts showing 10-minute rainfall for each represented Opelika station."
+#| fig-width: 7
+#| fig-height: 7
+#| fig-pos: H
+
+plot_station_intervals("Opelika")
+```
+
+{{< pagebreak >}}
+
+## Interpretation and limitations
+
+```{python}
+#| label: interpretation
+#| output: asis
+
+display(
+    Markdown(
+        f"The selected records show that **{winner['station_name']}** had the "
+        f"largest accumulated interval total during **{period_label}**. The "
+        f"comparison describes the observations available in the selected "
+        f"collection; it does not estimate rainfall between stations or prove "
+        f"that one part of the watershed received more rainfall everywhere. "
+        f"Auburn and Opelika can have different source sampling behavior, and "
+        f"station failures or empty responses reduce coverage."
+    )
+)
+```
+
+# Provenance and reproducibility
+
+```{python}
+#| label: tbl-provenance
+#| tbl-cap: "Data and software provenance recorded for this report render."
+#| output: asis
+
+display(Markdown(report_metadata.to_markdown(index=False)))
+```
+
+After collecting a period, the report automatically selects the most recently
+written processed collection:
+
+```bash
+uv run mmc --start-date 2026-01-01 --end-date 2026-01-08
+quarto render reports/mmc-rainfall-report.qmd --to pdf
+```
+
+The report source, inputs, PDF, metadata, and logs contain no API key or other
+secret.

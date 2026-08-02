@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0 - 2026-08-02
+
+Added the Sprint 5 documentation and reproducible-report release.
+
+- Reworked the README around project purpose, installation, exact commands, inputs, outputs, troubleshooting, and the fastest path to a result.
+- Added a standard open-source license and durable `AGENTS.md` project guidance.
+- Added project documentation and a data dictionary covering field meaning, types, units, provenance, missing values, and transformations.
+- Added an authoritative Quarto report source and its rendered PDF.
+- Made the report automatically follow the most recently collected API period.
+- Added a watershed and station location map, station statistics, total-rainfall comparisons, and direct rainfall charts at the processed data's nominal 10-minute cadence.
+- Added automated checks for the required documentation and report behavior.
+
 ## 0.4.0 - 2026-07-29
 
 Added the Sprint 4 Streamlit dashboard and refined its user-facing behavior.

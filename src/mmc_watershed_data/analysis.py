@@ -31,11 +31,15 @@ class RainfallEvent:
 
     @property
     def duration_minutes(self) -> float:
+        """Return the event duration between its first and last observations."""
+
         return (self.end - self.start).total_seconds() / 60
 
 
 @dataclass
 class _EventGroup:
+    """Mutable accumulator used while merging positive rainfall records."""
+
     start: datetime
     end: datetime
     total_rain_in: float
@@ -107,7 +111,10 @@ def detect_events(
 
     regional_groups: list[_EventGroup] = []
     for station_event in sorted(station_events, key=lambda item: item.start):
-        if not regional_groups or station_event.start > regional_groups[-1].end + merge_tolerance:
+        if (
+            not regional_groups
+            or station_event.start > regional_groups[-1].end + merge_tolerance
+        ):
             regional_groups.append(
                 _EventGroup(
                     start=station_event.start,

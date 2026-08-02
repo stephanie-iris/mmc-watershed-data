@@ -1,3 +1,5 @@
+"""Auburn LI-COR collection, evidence writing, and timestamp processing."""
+
 from __future__ import annotations
 
 import time as time_module
@@ -27,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 def build_headers() -> dict[str, str]:
+    """Build the public-dashboard headers accepted by the Auburn endpoint."""
+
     return {
         "accept": "application/json, text/plain, */*",
         "content-type": "application/json",
@@ -37,6 +41,8 @@ def build_headers() -> dict[str, str]:
 
 
 def _to_epoch_ms(value: datetime) -> int:
+    """Convert a datetime to UTC epoch milliseconds for an API request."""
+
     if value.tzinfo is None:
         value = value.replace(tzinfo=UTC)
     else:
@@ -45,12 +51,20 @@ def _to_epoch_ms(value: datetime) -> int:
 
 
 def _local_day_window(start_date: date, end_date: date) -> tuple[datetime, datetime]:
+    """Convert whole local days into an exclusive UTC request window."""
+
     start_local = datetime.combine(start_date, time.min, FIXED_UTC_MINUS_6)
-    end_local = datetime.combine(end_date + timedelta(days=1), time.min, FIXED_UTC_MINUS_6)
+    end_local = datetime.combine(
+        end_date + timedelta(days=1), time.min, FIXED_UTC_MINUS_6
+    )
     return start_local.astimezone(UTC), end_local.astimezone(UTC)
 
 
-def _build_body(station: Station, start_utc: datetime, end_utc: datetime) -> dict[str, Any]:
+def _build_body(
+    station: Station, start_utc: datetime, end_utc: datetime
+) -> dict[str, Any]:
+    """Build the Auburn timeseries request for one station and UTC window."""
+
     return {
         "dashboardUUID": AUBURN_DASHBOARD_UUID,
         "channels": [
@@ -72,7 +86,11 @@ def _build_body(station: Station, start_utc: datetime, end_utc: datetime) -> dic
     }
 
 
-def _extract_raw_rows(payload: dict[str, Any], station: Station) -> list[dict[str, Any]]:
+def _extract_raw_rows(
+    payload: dict[str, Any], station: Station
+) -> list[dict[str, Any]]:
+    """Validate an Auburn payload and flatten its values into raw CSV rows."""
+
     validated_payload = validate_auburn_payload(payload)
     rows: list[dict[str, Any]] = []
     for record in validated_payload.value.records:
@@ -93,6 +111,8 @@ def _convert_processed_rows(
     raw_rows: list[dict[str, Any]],
     station: Station,
 ) -> list[dict[str, Any]]:
+    """Convert Auburn epoch values into processed fixed-UTC-6 rainfall rows."""
+
     processed: list[dict[str, Any]] = []
     offset = timedelta(hours=-6)
     for row in raw_rows:
@@ -126,6 +146,8 @@ def collect_station(
     raw_dir: Path,
     processed_dir: Path,
 ) -> StationResult:
+    """Collect, preserve, validate, and write one Auburn station's outputs."""
+
     windows = chunk_dates(start_date, end_date, CHUNK_DAYS)
     headers = build_headers()
     raw_rows: list[dict[str, Any]] = []
@@ -170,15 +192,27 @@ def collect_station(
         )
         time_module.sleep(REQUEST_DELAY_SECONDS)
 
-    raw_json_path = raw_dir / f"{station.key}_{start_date.isoformat()}_to_{end_date.isoformat()}_raw.json"
-    raw_csv_path = raw_dir / f"{station.key}_{start_date.isoformat()}_to_{end_date.isoformat()}_raw.csv"
+    raw_json_path = (
+        raw_dir
+        / f"{station.key}_{start_date.isoformat()}_to_{end_date.isoformat()}_raw.json"
+    )
+    raw_csv_path = (
+        raw_dir
+        / f"{station.key}_{start_date.isoformat()}_to_{end_date.isoformat()}_raw.csv"
+    )
     processed_path = (
         processed_dir
         / f"{station.key}_{start_date.isoformat()}_to_{end_date.isoformat()}_processed.csv"
     )
 
     raw_fieldnames = ["city", "station_key", "station_name", "timestamp_ms", "value"]
-    processed_fieldnames = ["city", "station_key", "station_name", "Date_hour", "RainIn"]
+    processed_fieldnames = [
+        "city",
+        "station_key",
+        "station_name",
+        "Date_hour",
+        "RainIn",
+    ]
 
     write_json(
         raw_json_path,
@@ -186,7 +220,10 @@ def collect_station(
             "source": "auburn",
             "station": station.name,
             "station_key": station.key,
-            "date_range": {"start": start_date.isoformat(), "end": end_date.isoformat()},
+            "date_range": {
+                "start": start_date.isoformat(),
+                "end": end_date.isoformat(),
+            },
             "windows": raw_windows,
         },
     )
@@ -216,6 +253,8 @@ def collect_all(
     end_date: date,
     root: Path,
 ) -> tuple[list[StationResult], list[StationFailure]]:
+    """Collect every configured Auburn station and isolate station failures."""
+
     raw_dir = root / "data" / "raw" / "auburn"
     processed_dir = root / "data" / "processed" / "auburn"
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -224,7 +263,9 @@ def collect_all(
     failures: list[StationFailure] = []
     for station in AUBURN_STATIONS:
         try:
-            results.append(collect_station(station, start_date, end_date, raw_dir, processed_dir))
+            results.append(
+                collect_station(station, start_date, end_date, raw_dir, processed_dir)
+            )
         except Exception as exc:  # noqa: BLE001
             failures.append(StationFailure(station, str(exc)))
     return results, failures

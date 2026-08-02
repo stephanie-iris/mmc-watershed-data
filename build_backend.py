@@ -5,13 +5,18 @@ import csv
 import hashlib
 import io
 import tarfile
+import tomllib
 import zipfile
 from pathlib import Path
 
-NAME = "mmc-watershed-data"
-VERSION = "0.4.0"
-DIST_INFO = f"mmc_watershed_data-{VERSION}.dist-info"
 ROOT = Path(__file__).resolve().parent
+PROJECT = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
+    "project"
+]
+NAME = PROJECT["name"]
+VERSION = PROJECT["version"]
+SUMMARY = PROJECT["description"]
+DIST_INFO = f"mmc_watershed_data-{VERSION}.dist-info"
 SRC = ROOT / "src" / "mmc_watershed_data"
 
 
@@ -44,7 +49,7 @@ def prepare_metadata_for_build_wheel(metadata_directory, config_settings=None):
                 "Metadata-Version: 2.1",
                 f"Name: {NAME}",
                 f"Version: {VERSION}",
-                "Summary: Collect Auburn Ogletree rainfall data",
+                f"Summary: {SUMMARY}",
                 "Requires-Dist: folium>=0.20.0",
                 "Requires-Dist: pandas>=2.2.0",
                 "Requires-Dist: pydantic>=2.13.4",
@@ -97,7 +102,7 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
                 "Metadata-Version: 2.1",
                 f"Name: {NAME}",
                 f"Version: {VERSION}",
-                "Summary: Collect Auburn Ogletree rainfall data",
+                f"Summary: {SUMMARY}",
                 "Requires-Dist: folium>=0.20.0",
                 "Requires-Dist: pandas>=2.2.0",
                 "Requires-Dist: pydantic>=2.13.4",
@@ -163,7 +168,7 @@ def build_editable(wheel_directory, config_settings=None, metadata_directory=Non
                 "Metadata-Version: 2.1",
                 f"Name: {NAME}",
                 f"Version: {VERSION}",
-                "Summary: Collect Auburn Ogletree rainfall data",
+                f"Summary: {SUMMARY}",
                 "Requires-Dist: folium>=0.20.0",
                 "Requires-Dist: pandas>=2.2.0",
                 "Requires-Dist: pydantic>=2.13.4",

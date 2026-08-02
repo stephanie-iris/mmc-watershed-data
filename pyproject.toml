@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "mmc-watershed-data"
-version = "0.4.0"
+version = "0.5.0"
 description = "Collect Auburn Ogletree rainfall data and save raw and processed outputs."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,7 +26,33 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.ruff]
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["E402", "F401"]
+
 [dependency-groups]
 dev = [
     "coverage>=7.15.2",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.9.0",
+    "mypy>=1.16.0,<2.0",
+    "numpy<2.5",
+    "pytest>=8.4.0",
+    "ruff>=0.12.0",
+    "tabulate>=0.9.0",
 ]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*", "pandas", "pandas.*", "streamlit", "streamlit.*"]
+follow_imports = "skip"

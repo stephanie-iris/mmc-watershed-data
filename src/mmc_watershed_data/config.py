@@ -1,8 +1,11 @@
+"""Project-path helpers used by the command line tool and dashboard."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 
 def project_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+    """Return the repository root containing ``pyproject.toml``."""
 
+    return Path(__file__).resolve().parents[2]

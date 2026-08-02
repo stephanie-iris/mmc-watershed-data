@@ -15,5 +15,9 @@ htmlcov/
 data/
 logs/
 examples/
-.coverage
 .ipynb_checkpoints/
+.vscode/
+.quarto-local/
+.miktex/
+reports/*.log
+tmp/

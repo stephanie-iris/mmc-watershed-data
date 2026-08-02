@@ -30,7 +30,9 @@ class ValidationTests(unittest.TestCase):
 
         validated = validate_auburn_payload(payload)
 
-        self.assertEqual(validated.value.records[0].datum.valid[0], (1767225600000, 0.12))
+        self.assertEqual(
+            validated.value.records[0].datum.valid[0], (1767225600000, 0.12)
+        )
 
     def test_auburn_validation_reports_the_invalid_field(self) -> None:
         fixture = ROOT / "tests" / "fixtures" / "auburn-invalid.json"
