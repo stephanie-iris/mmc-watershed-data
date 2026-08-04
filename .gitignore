@@ -12,7 +12,7 @@ htmlcov/
 .venv/
 
 # Generated data
-data/
+/data/
 logs/
 examples/
 .ipynb_checkpoints/

@@ -24,6 +24,18 @@ class DocumentationTests(unittest.TestCase):
         ):
             self.assertTrue((ROOT / relative_path).is_file(), relative_path)
 
+    def test_root_data_ignore_does_not_hide_report_fallback(self) -> None:
+        """Generated root data is ignored without excluding report fixtures."""
+
+        patterns = {
+            line.strip()
+            for line in (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+
+        self.assertIn("/data/", patterns)
+        self.assertNotIn("data/", patterns)
+
     def test_report_uses_shared_loader_and_documents_rebuild_command(self) -> None:
         """The report source points to shared code and its rebuild command."""
 

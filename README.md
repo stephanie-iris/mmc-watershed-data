@@ -50,10 +50,12 @@ data/processed/auburn/  processed CSV files used by analysis
 data/processed/opelika/  processed CSV files used by analysis
 ```
 
-Generated `data/` and `logs/` files are ignored by Git because they can be
-recreated from the documented request. See the [data dictionary](docs/data-dictionary.md)
-for the processed CSV schema, units, provenance, missing-value rules, and
-transformations.
+Generated root-level `data/` and `logs/` files are ignored by Git because they
+can be recreated from the documented request. The small CSV under
+`reports/data/` is intentionally committed so a fresh clone can rebuild the
+report without calling the live APIs. See the
+[data dictionary](docs/data-dictionary.md) for the processed CSV schema, units,
+provenance, missing-value rules, and transformations.
 
 ### Processing Rules
 

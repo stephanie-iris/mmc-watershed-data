@@ -2,12 +2,14 @@
 
 from datetime import date
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 
 from mmc_watershed_data.reporting import load_report_dataset, parse_optional_date
 
 
+ROOT = Path(__file__).resolve().parents[1]
 CSV_HEADER = "city,station_key,station_name,Date_hour,RainIn\n"
 
 
@@ -72,6 +74,25 @@ class ReportingTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "MMC_REPORT_START_DATE"):
             parse_optional_date("January 1", "MMC_REPORT_START_DATE")
+
+    def test_bundled_dataset_rebuilds_report_without_generated_data(self) -> None:
+        """A clean project can load the committed offline report fallback."""
+
+        bundled_name = "mmc_report_2026-07-01_to_2026-08-01_processed.csv"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            report_data = root / "reports" / "data"
+            report_data.mkdir(parents=True)
+            shutil.copyfile(
+                ROOT / "reports" / "data" / bundled_name, report_data / bundled_name
+            )
+
+            dataset = load_report_dataset(root)
+
+        self.assertEqual(dataset.selection, "bundled reproducible report dataset")
+        self.assertEqual(dataset.start_date, date(2026, 7, 1))
+        self.assertEqual(dataset.end_date, date(2026, 8, 1))
+        self.assertGreater(len(dataset.records), 0)
 
 
 if __name__ == "__main__":

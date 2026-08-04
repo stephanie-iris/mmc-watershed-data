@@ -56,7 +56,8 @@ def load_rainfall_records(path: str | PathLike[str]) -> list[RainfallRecord]:
     import csv
 
     records: list[RainfallRecord] = []
-    with Path(path).open(encoding="utf-8", newline="") as handle:
+    # utf-8-sig also accepts regular UTF-8 while removing an optional CSV BOM.
+    with Path(path).open(encoding="utf-8-sig", newline="") as handle:
         for row in csv.DictReader(handle):
             records.append(
                 RainfallRecord(
