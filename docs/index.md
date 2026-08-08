@@ -36,8 +36,6 @@ The public APIs do not require credentials. Start with the
 | Understand fields, units, provenance, and transformations | [Data Dictionary](data-dictionary.md) |
 | Read or rebuild the analysis artifact | [Reproducible Report](report.md) |
 | Reuse loading, validation, and spatial behavior | [Python Reference](reference/collection.md) |
-| Build and verify a release | [Release Checklist](package-checklist.md) |
-| Review completed implementation requirements | [Sprint Specifications](specs/sprint-1.md) |
 
 The repository [README](https://github.com/stephanie-iris/mmc-watershed-data#readme)
 is the detailed user source of truth. Source docstrings define code-level

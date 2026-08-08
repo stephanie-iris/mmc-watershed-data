@@ -87,7 +87,11 @@ class DocumentationTests(unittest.TestCase):
 
         self.assertIn("mkdocstrings:", config)
         self.assertIn("Data Dictionary: data-dictionary.md", config)
-        self.assertIn("Release Checklist: package-checklist.md", config)
+        self.assertIn("exclude_docs:", config)
+        self.assertIn("package-checklist.md", config)
+        self.assertIn("specs/", config)
+        self.assertNotIn("Release Checklist: package-checklist.md", config)
+        self.assertNotIn("Sprint 7: specs/sprint-7.md", config)
         self.assertIn("mmc_watershed_data.spatial", reference)
 
     def test_report_documents_runtime_period_selection(self) -> None:

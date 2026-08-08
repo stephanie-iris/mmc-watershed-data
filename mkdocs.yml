@@ -27,15 +27,10 @@ nav:
       - Collection and Validation: reference/collection.md
       - Analysis and Spatial Logic: reference/analysis.md
       - Interfaces and Models: reference/interfaces.md
-  - Release Checklist: package-checklist.md
-  - Sprint Specifications:
-      - Sprint 1: specs/sprint-1.md
-      - Sprint 2: specs/sprint-2.md
-      - Sprint 3: specs/sprint-3.md
-      - Sprint 4: specs/sprint-4.md
-      - Sprint 5: specs/sprint-5.md
-      - Sprint 6: specs/sprint-6.md
-      - Sprint 7: specs/sprint-7.md
+
+exclude_docs: |
+  package-checklist.md
+  specs/
 
 markdown_extensions:
   - admonition

@@ -270,8 +270,7 @@ and visually inspected before a release.
 ## Documentation Website
 
 The documentation site combines the user guide, data dictionary, report
-instructions, completed sprint specifications, release checklist, and Python
-reference generated directly from source docstrings.
+instructions, and Python reference generated directly from source docstrings.
 
 Preview it locally:
 
