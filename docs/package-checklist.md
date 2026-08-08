@@ -11,6 +11,8 @@ file already present in `dist/`.
 - Confirm `.env`, `.coverage`, `data/`, `dist/`, virtual environments, logs,
   and notebook checkpoints are not tracked.
 - Confirm the latest GitHub Actions CI run for the release commit succeeds.
+- Confirm the Documentation workflow succeeds and the GitHub Pages site shows
+  the release commit.
 - Confirm no test or CI step calls the live Auburn or Opelika APIs.
 
 ## Local Quality Gate
@@ -25,6 +27,7 @@ uv run coverage report --show-missing --fail-under=70
 uv run ruff format --check .
 uv run ruff check .
 uv run mypy src
+uv run mkdocs build --strict
 quarto render reports/mmc-rainfall-report.qmd --to pdf
 ```
 

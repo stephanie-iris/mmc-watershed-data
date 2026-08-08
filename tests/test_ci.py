@@ -29,10 +29,26 @@ class ContinuousIntegrationTests(unittest.TestCase):
             "ruff format --check .",
             "ruff check .",
             "mypy src",
+            "mkdocs build --strict",
             "uv build --no-sources",
             "scripts/verify_package.py",
         ):
             self.assertIn(command, workflow)
+        self.assertNotIn("mmc --start-date", workflow)
+
+    def test_docs_workflow_builds_and_deploys_pages_from_main(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "docs.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("branches: [main]", workflow)
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("pages: write", workflow)
+        self.assertIn("id-token: write", workflow)
+        self.assertIn("uv sync --locked --group docs", workflow)
+        self.assertIn("uv run mkdocs build --strict", workflow)
+        self.assertIn("actions/upload-pages-artifact@", workflow)
+        self.assertIn("actions/deploy-pages@", workflow)
         self.assertNotIn("mmc --start-date", workflow)
 
     def test_generated_and_secret_paths_are_ignored_and_untracked(self) -> None:
@@ -47,6 +63,7 @@ class ContinuousIntegrationTests(unittest.TestCase):
             ".venv/",
             "/data/",
             "dist/",
+            "/site/",
             "logs/",
             ".ipynb_checkpoints/",
             ".vscode/",
@@ -71,7 +88,7 @@ class ContinuousIntegrationTests(unittest.TestCase):
             ".venv",
             ".ipynb_checkpoints",
         }
-        forbidden_top_level = {"data", "dist", "logs"}
+        forbidden_top_level = {"data", "dist", "logs", "site"}
         offenders = []
         for path in existing_tracked:
             parts = Path(path).parts

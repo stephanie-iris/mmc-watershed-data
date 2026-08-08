@@ -19,7 +19,13 @@ class DocumentationTests(unittest.TestCase):
             "docs/index.md",
             "docs/data-dictionary.md",
             "docs/package-checklist.md",
+            "docs/getting-started.md",
+            "docs/report.md",
+            "docs/reference/collection.md",
+            "docs/hooks.py",
+            "mkdocs.yml",
             ".github/workflows/ci.yml",
+            ".github/workflows/docs.yml",
             "reports/mmc-rainfall-report.qmd",
             "reports/mmc-rainfall-report.pdf",
             "reports/data/mmc_report_2026-07-01_to_2026-08-01_processed.csv",
@@ -66,8 +72,23 @@ class DocumentationTests(unittest.TestCase):
             "LICENSE",
             "docs/package-checklist.md",
             ".github/workflows/ci.yml",
+            ".github/workflows/docs.yml",
+            "https://stephanie-iris.github.io/mmc-watershed-data/",
         ):
             self.assertIn(link, readme)
+
+    def test_mkdocs_site_uses_docstrings_and_release_documentation(self) -> None:
+        """The Pages site exposes durable docs and generated Python reference."""
+
+        config = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+        reference = (ROOT / "docs" / "reference" / "analysis.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("mkdocstrings:", config)
+        self.assertIn("Data Dictionary: data-dictionary.md", config)
+        self.assertIn("Release Checklist: package-checklist.md", config)
+        self.assertIn("mmc_watershed_data.spatial", reference)
 
     def test_report_documents_runtime_period_selection(self) -> None:
         """The report follows the most recently saved API collection."""

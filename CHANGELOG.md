@@ -8,6 +8,7 @@ Added the Sprint 7 final-delivery safeguards and reproducible package evidence.
 - Made the wheel independently usable by bundling the license and geospatial KMZ assets, and made the source archive self-contained for rebuilding.
 - Added a release checklist, package verification script, 70% coverage gate, and repository-hygiene tests; removed the tracked notebook checkpoint.
 - Updated the README, project guidance, documentation map, and package metadata for the final release workflow.
+- Added a searchable MkDocs website, docstring-generated Python reference, and automatic GitHub Pages deployment on pushes to `main`.
 
 ## 0.6.0 - 2026-08-07
 

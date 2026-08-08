@@ -1,0 +1,70 @@
+site_name: MMC Watershed Data
+site_description: Rainfall collection and Thiessen watershed analysis for Moores Mill Creek
+site_url: https://stephanie-iris.github.io/mmc-watershed-data/
+repo_url: https://github.com/stephanie-iris/mmc-watershed-data
+repo_name: stephanie-iris/mmc-watershed-data
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: en
+  font: false
+  palette:
+    primary: green
+    accent: amber
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Data Dictionary: data-dictionary.md
+  - Reproducible Report: report.md
+  - Python Reference:
+      - Collection and Validation: reference/collection.md
+      - Analysis and Spatial Logic: reference/analysis.md
+      - Interfaces and Models: reference/interfaces.md
+  - Release Checklist: package-checklist.md
+  - Sprint Specifications:
+      - Sprint 1: specs/sprint-1.md
+      - Sprint 2: specs/sprint-2.md
+      - Sprint 3: specs/sprint-3.md
+      - Sprint 4: specs/sprint-4.md
+      - Sprint 5: specs/sprint-5.md
+      - Sprint 6: specs/sprint-6.md
+      - Sprint 7: specs/sprint-7.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            filters: ["!^_"]
+            show_root_heading: true
+            show_source: false
+            signature_crossrefs: true
+
+hooks:
+  - docs/hooks.py
+
+extra_css:
+  - stylesheets/extra.css
+
+copyright: MIT License | MMC Watershed Data

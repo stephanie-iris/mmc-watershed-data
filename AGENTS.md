@@ -22,6 +22,7 @@ uv run coverage report --show-missing --fail-under=70
 uv run ruff format --check .
 uv run ruff check .
 uv run mypy src
+uv run mkdocs build --strict
 uv build --no-sources
 uv run python scripts/verify_package.py
 quarto render reports/mmc-rainfall-report.qmd --to pdf
@@ -65,6 +66,8 @@ Package verification uses temporary environments and does not call live APIs.
 - `reports/mmc-rainfall-report.qmd` is the authoritative report source, and its
   PDF is generated output from that source.
 - `.github/workflows/ci.yml` is the authoritative automated quality gate.
+- `mkdocs.yml` defines the documentation website, and
+  `.github/workflows/docs.yml` is its GitHub Pages deployment source.
 - `docs/package-checklist.md` is the source of truth for release artifact
   verification.
 - Source docstrings and tests define code-level contracts and expected failure

@@ -217,6 +217,7 @@ def build_sdist(sdist_directory, config_settings=None):
             Path(".python-version"),
             Path("CHANGELOG.md"),
             Path("LICENSE"),
+            Path("mkdocs.yml"),
             Path("pyproject.toml"),
             Path("README.md"),
             Path("AGENTS.md"),

@@ -107,6 +107,7 @@ def _verify_sdist(sdist: Path, version: str) -> None:
         f"{base}/build_backend.py",
         f"{base}/README.md",
         f"{base}/LICENSE",
+        f"{base}/mkdocs.yml",
         f"{base}/uv.lock",
         f"{base}/src/mmc_watershed_data/cli.py",
         f"{base}/assets/geospatial/watershed/mmc_boundary.kmz",
@@ -115,6 +116,9 @@ def _verify_sdist(sdist: Path, version: str) -> None:
         f"{base}/reports/mmc-rainfall-report.qmd",
         f"{base}/scripts/verify_package.py",
         f"{base}/.github/workflows/ci.yml",
+        f"{base}/.github/workflows/docs.yml",
+        f"{base}/docs/reference/collection.md",
+        f"{base}/docs/hooks.py",
     }
     forbidden_anywhere = {
         ".coverage",
@@ -128,6 +132,7 @@ def _verify_sdist(sdist: Path, version: str) -> None:
         "dist",
         "htmlcov",
         "logs",
+        "site",
     }
     with tarfile.open(sdist, "r:gz") as archive:
         members = {member.name.replace("\\", "/") for member in archive.getmembers()}

@@ -9,6 +9,9 @@ dashboard, validated raw-to-processed outputs, and a reproducible Quarto report.
 
 Current version: `0.7.0`
 
+Documentation website:
+[stephanie-iris.github.io/mmc-watershed-data](https://stephanie-iris.github.io/mmc-watershed-data/)
+
 ## Fastest Working Result
 
 Requirements: Python 3.11 or newer, `uv`, and an internet connection for API
@@ -264,6 +267,31 @@ Quarto rendering remains a documented local check because a PDF engine is an
 external system dependency. The committed report PDF must still be rendered
 and visually inspected before a release.
 
+## Documentation Website
+
+The documentation site combines the user guide, data dictionary, report
+instructions, completed sprint specifications, release checklist, and Python
+reference generated directly from source docstrings.
+
+Preview it locally:
+
+```bash
+uv sync --locked --group docs
+uv run mkdocs serve
+```
+
+Validate the production build:
+
+```bash
+uv run mkdocs build --strict
+```
+
+The [documentation workflow](.github/workflows/docs.yml) rebuilds and deploys
+the site to [GitHub Pages](https://stephanie-iris.github.io/mmc-watershed-data/)
+after every push to `main`. It can also be run manually from the repository's
+**Actions** tab. The repository's **Settings > Pages > Build and deployment >
+Source** must be set to **GitHub Actions** once by a repository administrator.
+
 ## Package Evidence
 
 Build the exact wheel and source archive required for a release:
@@ -342,6 +370,7 @@ Jupyter/PyYAML is unavailable, Quarto is using the wrong Python interpreter.
 - [Processed data dictionary](docs/data-dictionary.md)
 - [Package release checklist](docs/package-checklist.md)
 - [GitHub Actions CI workflow](.github/workflows/ci.yml)
+- [GitHub Pages documentation workflow](.github/workflows/docs.yml)
 - [Sprint specifications](docs/specs/)
 - [Project guidance](AGENTS.md)
 - [MIT License](LICENSE)

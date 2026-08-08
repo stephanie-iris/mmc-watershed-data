@@ -27,7 +27,7 @@ jobs:
           enable-cache: true
 
       - name: Restore locked environment
-        run: uv sync --locked
+        run: uv sync --locked --group docs
 
       - name: Run offline tests with coverage
         run: |
@@ -42,6 +42,9 @@ jobs:
 
       - name: Run type checks
         run: uv run mypy src
+
+      - name: Build documentation
+        run: uv run mkdocs build --strict
 
       - name: Build release artifacts
         run: uv build --no-sources
