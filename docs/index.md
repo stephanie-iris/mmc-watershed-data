@@ -7,7 +7,7 @@ This page maps the durable project documentation to the question it answers.
 | --- | --- |
 | Install, configure, run, test, or troubleshoot | [`README.md`](../README.md) |
 | Understand project guidance and source-of-truth rules | [`AGENTS.md`](../AGENTS.md) |
-| Understand processed rainfall fields and transformations | [`data-dictionary.md`](data-dictionary.md) |
+| Understand station, Thiessen-weight, GeoJSON, and watershed-rainfall fields | [`data-dictionary.md`](data-dictionary.md) |
 | Review completed implementation requirements | [`specs/`](specs/) |
 | Read or rebuild the rainfall report | [`reports/`](../reports/) |
 | See expected behavior and offline test inputs | [`tests/`](../tests/) and [`tests/fixtures/`](../tests/fixtures/) |

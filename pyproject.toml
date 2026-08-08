@@ -5,14 +5,17 @@ backend-path = ["."]
 
 [project]
 name = "mmc-watershed-data"
-version = "0.5.0"
-description = "Collect Auburn Ogletree rainfall data and save raw and processed outputs."
+version = "0.6.0"
+description = "Collect station rainfall and derive Thiessen-weighted MMC watershed rainfall."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "folium>=0.20.0",
+    "geopandas>=1.0.0",
     "pandas>=2.2.0",
     "pydantic>=2.13.4",
+    "pyproj>=3.7.0",
+    "shapely>=2.1.0",
     "streamlit>=1.45.0",
     "streamlit-folium>=0.25.0",
 ]

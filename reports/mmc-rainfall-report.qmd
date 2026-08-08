@@ -7,8 +7,8 @@ date-format: long
 abstract: |
   MMC Watershed Data collects and standardizes rainfall observations from
   Auburn and Opelika stations near the Moores Mill Creek watershed. This report
-  compares station totals and 10-minute rainfall patterns for one saved
-  collection selected at render time.
+  presents station observations and a Thiessen area-weighted watershed
+  rainfall series for one saved collection selected at render time.
 format:
   pdf:
     toc: true
@@ -40,6 +40,11 @@ from mmc_watershed_data.geospatial import (
     load_watershed_boundary,
 )
 from mmc_watershed_data.reporting import load_report_dataset
+from mmc_watershed_data.spatial import (
+    ANALYSIS_CRS,
+    SpatialAnalysisError,
+    analyze_spatial_rainfall,
+)
 from mmc_watershed_data.stations import AUBURN_STATIONS, OPELIKA_STATIONS
 
 
@@ -84,10 +89,6 @@ winner = station_summary.iloc[0]
 period_label = (
     f"{dataset.start_date:%B %d, %Y} through {dataset.end_date:%B %d, %Y}"
 )
-total_rainfall = float(station_summary["total_rain_in"].sum())
-winner_share = (
-    float(winner["total_rain_in"]) / total_rainfall if total_rainfall > 0 else 0.0
-)
 city_totals = station_summary.groupby("city")["total_rain_in"].sum().to_dict()
 configured_station_names = {
     station.name for station in AUBURN_STATIONS + OPELIKA_STATIONS
@@ -104,6 +105,53 @@ coverage_sentence = (
 rendered_at = datetime.now(timezone.utc).replace(microsecond=0)
 station_points = load_station_points(project_root)
 watershed_boundary = load_watershed_boundary(project_root)
+try:
+    spatial_analysis = analyze_spatial_rainfall(
+        project_root,
+        dataset.records,
+        dataset.start_date,
+        dataset.end_date,
+    )
+    spatial_error = None
+except (OSError, ValueError, SpatialAnalysisError) as exc:
+    spatial_analysis = None
+    spatial_error = str(exc)
+
+if spatial_analysis is not None:
+    weight_summary = pd.DataFrame(
+        [
+            {
+                "Station": weight.station_name,
+                "Eligible": weight.eligible,
+                "Coverage": weight.temporal_coverage,
+                "Area (km2)": weight.thiessen_area_km2,
+                "Watershed (%)": weight.area_percent,
+                "Weight": weight.weight,
+                "Aggregated": weight.aggregated_observation_count,
+                "Exclusion": weight.exclusion_reason,
+            }
+            for weight in spatial_analysis.weights
+        ]
+    )
+    areal_frame = pd.DataFrame(
+        [
+            {
+                "timestamp": row.timestamp,
+                "Thiessen weighted": row.rain_in,
+                "quality": row.quality_flag,
+            }
+            for row in spatial_analysis.rainfall
+        ]
+    )
+    complete_intervals = int((areal_frame["quality"] == "complete").sum())
+    incomplete_intervals = len(areal_frame) - complete_intervals
+    thiessen_total = float(areal_frame["Thiessen weighted"].sum())
+else:
+    weight_summary = pd.DataFrame()
+    areal_frame = pd.DataFrame()
+    complete_intervals = 0
+    incomplete_intervals = 0
+    thiessen_total = 0.0
 chart_start = pd.Timestamp(dataset.start_date)
 chart_end = pd.Timestamp(dataset.end_date + timedelta(days=1))
 
@@ -114,6 +162,9 @@ report_metadata = pd.DataFrame(
         ("Processed station files", len(dataset.source_files)),
         ("Validated observations", len(dataset.records)),
         ("Stations represented", len(station_summary)),
+        ("Spatial method", "Thiessen nearest-station area weighting"),
+        ("Spatial analysis CRS", ANALYSIS_CRS),
+        ("Station coverage threshold", "90% of nominal 10-minute intervals"),
         ("Rainfall unit", "inches per processed interval"),
         (
             "Auburn source",
@@ -148,9 +199,8 @@ display(
         f"period is **{period_label}**, with "
         f"**{len(dataset.records):,} validated observations** from "
         f"**{len(station_summary)} stations**. {coverage_sentence} It asks: "
-        f"**which station "
-        f"recorded the greatest total interval rainfall during this period, and "
-        f"how did rainfall vary among the represented stations?**"
+        f"**what total and temporal rainfall pattern does Thiessen weighting "
+        f"estimate for the MMC watershed during this period?**"
     )
 )
 ```
@@ -163,22 +213,41 @@ interest for this project. Figure 1 places the configured Auburn and Opelika
 rainfall stations relative to that boundary: blue points are Auburn stations,
 red points are Opelika stations, and the green polygon is the watershed.
 
-Each station measures rainfall at one location. Stations inside and around the
+The colored areas inside the green boundary are the clipped Thiessen influence
+regions used for watershed weighting. Each station measures rainfall at one
+location. Stations inside and around the
 watershed help show how rainfall varies across the area, but an individual
 station value should not be interpreted as rainfall over the entire watershed.
 
 ```{python}
 #| label: fig-station-map
-#| fig-cap: "Auburn and Opelika rainfall stations relative to the Moores Mill Creek watershed boundary."
-#| fig-alt: "Map showing the Moores Mill Creek watershed boundary and rainfall stations colored by city."
+#| fig-cap: "Thiessen influence areas and rainfall stations relative to the Moores Mill Creek watershed boundary."
+#| fig-alt: "Map showing clipped Thiessen polygons, watershed boundary, and rainfall stations colored by city."
 #| fig-width: 7
-#| fig-height: 6
+#| fig-height: 4.7
 #| fig-pos: H
 
 city_colors = {"Auburn": "#1f77b4", "Opelika": "#d62728"}
 boundary_latitudes = [latitude for latitude, _longitude in watershed_boundary]
 boundary_longitudes = [longitude for _latitude, longitude in watershed_boundary]
-fig, ax = plt.subplots(figsize=(7, 6))
+fig, ax = plt.subplots(figsize=(7, 4.2))
+if spatial_analysis is not None:
+    polygon_colors = plt.cm.Set3.colors
+    for index, weight in enumerate(spatial_analysis.weights):
+        geometry = weight.geometry
+        if geometry is None or geometry.is_empty:
+            continue
+        parts = geometry.geoms if geometry.geom_type == "MultiPolygon" else [geometry]
+        for part in parts:
+            x_values, y_values = part.exterior.xy
+            ax.fill(
+                x_values,
+                y_values,
+                color=polygon_colors[index % len(polygon_colors)],
+                alpha=0.32,
+                edgecolor="#555555",
+                linewidth=0.8,
+            )
 ax.fill(
     boundary_longitudes,
     boundary_latitudes,
@@ -212,12 +281,18 @@ for city in ("Auburn", "Opelika"):
         )
 ax.set_xlabel("Longitude")
 ax.set_ylabel("Latitude")
-ax.set_title("MMC watershed and rainfall station locations")
+ax.set_title("MMC Thiessen areas and rainfall station locations")
 ax.set_aspect("equal", adjustable="datalim")
 ax.grid(alpha=0.15)
 ax.legend(
     handles=[
         Line2D([0], [0], color="#2f6b3b", linewidth=2, label="MMC watershed"),
+        Patch(
+            facecolor="#8fb996",
+            edgecolor="#555555",
+            alpha=0.32,
+            label="Thiessen influence area",
+        ),
         Line2D(
             [0],
             [0],
@@ -247,7 +322,7 @@ plt.show()
 
 # Data and method
 
-The report selects one complete processed collection using the date range
+The report selects one processed collection using the date range
 encoded in MMC's station filenames. It always chooses the collection most
 recently written under `data/processed/`, so its period follows the latest API
 collection made with `mmc`. If no generated collection exists, the report uses
@@ -263,6 +338,19 @@ value per source observation at a nominal 10-minute cadence. The station
 time-series figures plot those rows directly at their saved `Date_hour`
 timestamps; the report does not resample or sum them into new time windows.
 
+For watershed-scale rainfall, the report calls the project's shared spatial
+module. It projects WGS 84 station and watershed geometries to WGS 84 / UTM
+Zone 16N (`EPSG:32616`), clips nearest-station Thiessen regions to the MMC
+watershed, and uses each clipped area fraction as a fixed station weight.
+Stations need at least 90% of the expected nominal intervals for the period.
+Timestamps are aligned to the nearest 10-minute label only for this derived
+calculation. Distinct Auburn or Opelika timestamps assigned to one label are
+summed to preserve interval rainfall. Exact repeated rows are counted once;
+divergent values at an identical timestamp remain a station-level quality
+conflict. Original processed rows remain unchanged. If any positive station weight is missing at a label, the
+watershed value remains blank and is marked incomplete; weights are not
+redistributed and missing rainfall is not replaced with zero.
+
 # Results
 
 ## Summary
@@ -275,8 +363,13 @@ display(
     Markdown(
         f"For **{period_label}**, **{winner['station_name']}** recorded the "
         f"largest station total at **{winner['total_rain_in']:.2f} inches**. "
-        f"That represents **{winner_share:.1%}** of the sum across represented "
-        f"stations. Auburn stations contributed **{city_totals.get('Auburn', 0.0):.2f} "
+        + (
+            f"Across complete intervals, the Thiessen watershed rainfall "
+            f"totals **{thiessen_total:.2f} inches**. "
+            if spatial_analysis is not None
+            else "No Thiessen watershed estimate is available for this collection. "
+        )
+        + f"Auburn stations contributed **{city_totals.get('Auburn', 0.0):.2f} "
         f"inches** and Opelika stations contributed "
         f"**{city_totals.get('Opelika', 0.0):.2f} inches** when station interval "
         f"values are summed."
@@ -312,6 +405,81 @@ display(
         ].to_markdown(index=False, floatfmt=".2f")
     )
 )
+```
+
+## Thiessen watershed rainfall
+
+```{python}
+#| label: spatial-status
+#| output: asis
+
+if spatial_analysis is None:
+    display(
+        Markdown(
+            "The selected collection cannot support a Thiessen estimate: "
+            f"**{spatial_error}** Station results remain valid, but no "
+            "watershed rainfall value is reported."
+        )
+    )
+else:
+    display(
+        Markdown(
+            f"The projected MMC watershed area is "
+            f"**{spatial_analysis.watershed_area_m2 / 1e6:.2f} km2**. "
+            f"**{spatial_analysis.eligible_count} stations** met the "
+            f"{spatial_analysis.coverage_threshold:.0%} period threshold and "
+            f"**{spatial_analysis.excluded_count}** were excluded. The series "
+            f"contains **{complete_intervals:,} complete** and "
+            f"**{incomplete_intervals:,} incomplete** 10-minute intervals."
+        )
+    )
+```
+
+```{python}
+#| label: tbl-thiessen-weights
+#| tbl-cap: "Period-level station eligibility, clipped watershed area, and fixed Thiessen weights."
+#| output: asis
+
+if spatial_analysis is not None:
+    display(
+        Markdown(
+            weight_summary.to_markdown(
+                index=False,
+                floatfmt=("", "", ".1%", ".3f", ".2f", ".5f", "", ""),
+            )
+        )
+    )
+```
+
+```{python}
+#| label: fig-watershed-hyetograph
+#| fig-cap: "Thiessen-weighted MMC watershed rainfall at complete 10-minute intervals."
+#| fig-alt: "Bar chart of Thiessen-weighted watershed rainfall through the selected period."
+#| fig-width: 7
+#| fig-height: 4.5
+#| fig-pos: H
+
+if spatial_analysis is not None:
+    complete_data = areal_frame.loc[areal_frame["quality"] == "complete"]
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.bar(
+        complete_data["timestamp"],
+        complete_data["Thiessen weighted"],
+        color="#2a6f4e",
+        width=10 / (24 * 60),
+        label="Thiessen weighted",
+    )
+    ax.set_ylabel("Rainfall per interval (inches)")
+    ax.set_xlabel("Analysis time (fixed UTC-6 local time)")
+    ax.set_xlim(chart_start, chart_end)
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=8))
+    ax.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(ax.xaxis.get_major_locator())
+    )
+    ax.legend()
+    ax.grid(alpha=0.2)
+    fig.tight_layout()
+    plt.show()
 ```
 
 ## Rainfall totals
@@ -435,11 +603,18 @@ display(
     Markdown(
         f"The selected records show that **{winner['station_name']}** had the "
         f"largest accumulated interval total during **{period_label}**. The "
-        f"comparison describes the observations available in the selected "
-        f"collection; it does not estimate rainfall between stations or prove "
-        f"that one part of the watershed received more rainfall everywhere. "
-        f"Auburn and Opelika can have different source sampling behavior, and "
-        f"station failures or empty responses reduce coverage."
+        + (
+            f"The Thiessen series converts eligible point observations into a "
+            f"watershed estimate by nearest-station area. The complete intervals "
+            f"represent **{thiessen_total:.2f} inches** of watershed rainfall. "
+            f"Only {complete_intervals:,} complete intervals should be used as "
+            f"model input without an explicit future gap-filling decision. "
+            if spatial_analysis is not None
+            else f"selected period did not satisfy the spatial eligibility "
+            f"requirements, so no watershed estimate is interpreted. "
+        )
+        + f"Thiessen rainfall is a nearest-station spatial estimate, not radar "
+        f"rainfall or proof that precipitation was uniform inside each polygon."
     )
 )
 ```

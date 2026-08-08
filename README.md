@@ -7,7 +7,7 @@ rainfall observations from stations in Auburn and Opelika, Alabama.
 The project provides a `uv` command-line tool named `mmc`, a Streamlit
 dashboard, validated raw-to-processed outputs, and a reproducible Quarto report.
 
-Current version: `0.5.0`
+Current version: `0.6.0`
 
 ## Fastest Working Result
 
@@ -48,6 +48,7 @@ data/raw/auburn/         raw JSON evidence and readable raw CSV extracts
 data/raw/opelika/        raw JSON evidence and readable raw CSV extracts
 data/processed/auburn/  processed CSV files used by analysis
 data/processed/opelika/  processed CSV files used by analysis
+data/processed/spatial/ Thiessen weights, polygons, and watershed rainfall
 ```
 
 Generated root-level `data/` and `logs/` files are ignored by Git because they
@@ -73,6 +74,42 @@ Opelika returns date/time records with cumulative `RainToday`. MMC saves the
 response, validates the fields, and converts consecutive cumulative values into
 interval `RainIn` values. A negative difference is treated as a counter reset
 and the current cumulative value is used for that interval.
+
+After station processing, MMC creates Thiessen polygons from stations with at
+least 90% of the expected nominal 10-minute observations. Station and watershed
+coordinates begin in WGS 84 and are projected to WGS 84 / UTM Zone 16N
+(`EPSG:32616`) before clipping and measuring area. For station `i`:
+
+```text
+weight_i = clipped_thiessen_area_i / watershed_area
+watershed_rainfall_t = sum(weight_i * station_rainfall_i_t)
+```
+
+For this derived calculation only, observations are assigned to the nearest
+10-minute label; an exact five-minute tie rounds forward. The period-level
+weights remain fixed. If any positive-weight station lacks an observation,
+MMC leaves `RainIn` blank, marks the interval `incomplete`, and does not replace
+the missing value with zero, interpolate it, or redistribute its weight.
+
+When observations from distinct timestamps align to the same nominal 10-minute
+label, MMC sums their interval `RainIn` values for both Auburn and Opelika so
+the recorded rainfall is preserved. This is especially explicit for Opelika,
+whose increments were derived from the cumulative `RainToday` counter. Exact
+duplicates with the same timestamp and value are counted once; equal timestamps
+with divergent values exclude the station as a data-quality conflict. Original
+processed rows and timestamps remain unchanged, and aggregation counts are
+written to the weights audit.
+
+The spatial outputs are:
+
+```text
+mmc_thiessen_weights_START_to_END.csv       eligibility, area, and weights
+mmc_thiessen_polygons_START_to_END.geojson  clipped polygons in EPSG:4326
+mmc_areal_rainfall_START_to_END.csv         model-ready watershed time series
+```
+
+Thiessen rainfall is a transparent nearest-station spatial estimate. It is not
+radar rainfall and does not establish uniform rainfall within each polygon.
 
 ## CLI
 
@@ -119,6 +156,13 @@ duration, total interval precipitation, and participating stations. A positive
 `RainIn` observation indicates rainfall; nearby observations are grouped using
 the one-hour event tolerance documented in the analysis module.
 
+The **Watershed Rainfall** page displays clipped Thiessen polygons, eligible and
+excluded stations, projected watershed area, temporal coverage, fixed weights,
+complete and incomplete interval counts, a watershed hyetograph, and a
+station influence table. It also downloads the weights CSV, polygon GeoJSON,
+and watershed rainfall CSV. New API results update this page immediately;
+loading matching saved station CSVs rebuilds the same products.
+
 ## Reproducible Report
 
 The authoritative report source is
@@ -138,10 +182,13 @@ quarto render reports/mmc-rainfall-report.qmd --to pdf
 The first command creates one processed CSV per station. The report groups
 those files by the date range encoded in their filenames and automatically
 selects the collection written most recently. Its reporting dates, summary,
-station table, watershed location map, total-rainfall chart, station charts in
-the sources' nominal 10-minute cadence, interpretation, and provenance are all
-generated from that collection. If a clone has no generated data, the bundled
-dataset under `reports/data/` allows the repository PDF to be rebuilt offline.
+station table, Thiessen map and weights, watershed rainfall hyetograph, station
+charts in the sources' nominal 10-minute cadence, interpretation, and
+provenance are all generated from that collection. If a clone has no generated
+data, the bundled dataset under `reports/data/` allows the repository PDF to be
+rebuilt offline. When that dataset does not satisfy the 90% spatial eligibility
+policy, the report explains why no watershed estimate is shown rather than
+presenting an unsupported value.
 
 The report does not accept a separate reporting period. To change its dates,
 run `mmc` for the desired API period and render again. This prevents an old
@@ -222,6 +269,16 @@ use **Load saved CSVs** and select a period with processed files.
 Confirm that the tracked files remain under
 `assets/geospatial/stations/` and `assets/geospatial/watershed/`. The dashboard
 does not create or edit KMZ files.
+
+**Spatial products were not created**
+
+Read the warning printed by `mmc` or shown in the dashboard. Common causes are
+fewer than three stations remaining after exclusions for low coverage,
+duplicate coordinates, conflicting values at an identical timestamp, collinear
+locations, or an unrepairable watershed geometry. Distinct interval values
+sharing an aligned label are summed and reported in the weights audit and
+operational log. Station raw and processed files remain available even when the
+derived spatial step cannot run.
 
 **Quarto cannot render the PDF**
 

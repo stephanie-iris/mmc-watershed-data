@@ -16,6 +16,9 @@ PROJECT = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
 NAME = PROJECT["name"]
 VERSION = PROJECT["version"]
 SUMMARY = PROJECT["description"]
+DEPENDENCY_METADATA = [
+    f"Requires-Dist: {dependency}" for dependency in PROJECT["dependencies"]
+]
 DIST_INFO = f"mmc_watershed_data-{VERSION}.dist-info"
 SRC = ROOT / "src" / "mmc_watershed_data"
 
@@ -50,11 +53,7 @@ def prepare_metadata_for_build_wheel(metadata_directory, config_settings=None):
                 f"Name: {NAME}",
                 f"Version: {VERSION}",
                 f"Summary: {SUMMARY}",
-                "Requires-Dist: folium>=0.20.0",
-                "Requires-Dist: pandas>=2.2.0",
-                "Requires-Dist: pydantic>=2.13.4",
-                "Requires-Dist: streamlit>=1.45.0",
-                "Requires-Dist: streamlit-folium>=0.25.0",
+                *DEPENDENCY_METADATA,
                 "",
             ]
         ),
@@ -103,11 +102,7 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
                 f"Name: {NAME}",
                 f"Version: {VERSION}",
                 f"Summary: {SUMMARY}",
-                "Requires-Dist: folium>=0.20.0",
-                "Requires-Dist: pandas>=2.2.0",
-                "Requires-Dist: pydantic>=2.13.4",
-                "Requires-Dist: streamlit>=1.45.0",
-                "Requires-Dist: streamlit-folium>=0.25.0",
+                *DEPENDENCY_METADATA,
                 "",
             ]
         ).encode("utf-8")
@@ -169,11 +164,7 @@ def build_editable(wheel_directory, config_settings=None, metadata_directory=Non
                 f"Name: {NAME}",
                 f"Version: {VERSION}",
                 f"Summary: {SUMMARY}",
-                "Requires-Dist: folium>=0.20.0",
-                "Requires-Dist: pandas>=2.2.0",
-                "Requires-Dist: pydantic>=2.13.4",
-                "Requires-Dist: streamlit>=1.45.0",
-                "Requires-Dist: streamlit-folium>=0.25.0",
+                *DEPENDENCY_METADATA,
                 "",
             ]
         ).encode("utf-8")

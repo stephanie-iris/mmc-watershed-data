@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 - 2026-08-07
+
+Added the Sprint 6 Thiessen watershed-rainfall release for hydrologic modeling.
+
+- Added projected Voronoi construction and watershed clipping in `EPSG:32616`, with explicit geometry, area, overlap, coverage, and weight validation.
+- Added deterministic 90% station eligibility, nearest 10-minute alignment, rainfall-preserving interval summation for both cities, exact-duplicate safeguards, aggregation auditing, and strict missing-data handling without interpolation or weight redistribution.
+- Added auditable weights CSV, clipped-polygon GeoJSON, and model-ready watershed rainfall CSV outputs.
+- Integrated the shared spatial workflow into the `mmc` command, saved-data loading, dashboard session, and automatic Quarto report.
+- Added the Watershed Rainfall dashboard page with Thiessen map, metrics, tables, charts, quality status, and downloads.
+- Expanded the report, README, data dictionary, package metadata, and offline tests for the spatial method.
+
 ## 0.5.0 - 2026-08-02
 
 Added the Sprint 5 documentation and reproducible-report release.

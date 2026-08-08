@@ -73,7 +73,20 @@ class DocumentationTests(unittest.TestCase):
         )
 
         self.assertIn("load_report_dataset", source)
+        self.assertIn("analyze_spatial_rainfall", source)
         self.assertIn("recently written", source)
+
+    def test_readme_and_dashboard_document_spatial_products(self) -> None:
+        """User-facing documentation exposes the Sprint 6 workflow."""
+
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        dashboard = (ROOT / "src" / "mmc_watershed_data" / "dashboard.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Watershed Rainfall", readme)
+        self.assertIn("mmc_areal_rainfall_START_to_END.csv", readme)
+        self.assertIn('"Watershed Rainfall"', dashboard)
 
 
 if __name__ == "__main__":

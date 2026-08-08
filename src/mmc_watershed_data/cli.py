@@ -11,7 +11,7 @@ from . import __version__
 from .config import project_root
 from .models import StationFailure, StationResult
 from .logging_config import LoggingSetupError, configure_logging
-from .workflow import CollectionRequest, collect_rainfall
+from .workflow import CollectionRequest, CollectionResult, collect_rainfall
 
 
 logger = logging.getLogger(__name__)
@@ -21,10 +21,14 @@ def parse_args() -> argparse.Namespace:
     """Parse date-range, logging, and version options for ``mmc``."""
 
     parser = argparse.ArgumentParser(
-        description="Collect Auburn and Opelika rainfall data for whole calendar days.",
+        description=(
+            "Collect Auburn and Opelika rainfall for whole days and derive "
+            "Thiessen-weighted MMC watershed rainfall."
+        ),
         epilog=(
             "Example: mmc --start-date 2026-01-01 --end-date 2026-01-08\n"
-            "Outputs are written under data/raw/ and data/processed/."
+            "Station evidence is written under data/raw/ and data/processed/; "
+            "spatial products use data/processed/spatial/."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -64,7 +68,7 @@ def print_banner(start_date: date, end_date: date) -> None:
     print("========================================")
     print(f"Period : {start_date.isoformat()} to {end_date.isoformat()}")
     print("Cities : Auburn, Opelika")
-    print("Output : data/raw/ and data/processed/")
+    print("Output : station evidence and derived watershed rainfall")
     print()
 
 
@@ -93,6 +97,7 @@ def print_city_results(
 def print_summary(
     all_results: list[StationResult],
     all_failures: list[StationFailure],
+    collection: CollectionResult | None = None,
 ) -> None:
     """Print aggregate row and station counts after collection."""
 
@@ -105,6 +110,21 @@ def print_summary(
     print(f"Raw rows           : {raw_total}")
     print(f"Processed rows     : {processed_total}")
     print(f"Stations failed    : {len(all_failures)}")
+    if collection is None:
+        return
+    spatial = collection.spatial_analysis
+    print()
+    print("Watershed rainfall")
+    print("------------------")
+    if spatial is None:
+        print(f"  ! Spatial products were not created: {collection.spatial_failure}")
+        return
+    print(f"Eligible stations : {spatial.eligible_count}")
+    print(f"Excluded stations : {spatial.excluded_count}")
+    if spatial.outputs is not None:
+        print(f"Weights CSV       -> {spatial.outputs.weights_csv}")
+        print(f"Polygons GeoJSON  -> {spatial.outputs.polygons_geojson}")
+        print(f"Rainfall CSV      -> {spatial.outputs.areal_rainfall_csv}")
 
 
 def main() -> int:
@@ -160,6 +180,7 @@ def main() -> int:
     print_summary(
         list(collection.station_results),
         list(collection.station_failures),
+        collection,
     )
     logger.info("MMC collection finished.")
     return 0
