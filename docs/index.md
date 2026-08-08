@@ -10,6 +10,8 @@ This page maps the durable project documentation to the question it answers.
 | Understand station, Thiessen-weight, GeoJSON, and watershed-rainfall fields | [`data-dictionary.md`](data-dictionary.md) |
 | Review completed implementation requirements | [`specs/`](specs/) |
 | Read or rebuild the rainfall report | [`reports/`](../reports/) |
+| Build and verify release artifacts | [`package-checklist.md`](package-checklist.md) |
+| Review the automated quality gate | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) |
 | See expected behavior and offline test inputs | [`tests/`](../tests/) and [`tests/fixtures/`](../tests/fixtures/) |
 | Review the open-source license | [`LICENSE`](../LICENSE) |
 

@@ -7,7 +7,7 @@ rainfall observations from stations in Auburn and Opelika, Alabama.
 The project provides a `uv` command-line tool named `mmc`, a Streamlit
 dashboard, validated raw-to-processed outputs, and a reproducible Quarto report.
 
-Current version: `0.6.0`
+Current version: `0.7.0`
 
 ## Fastest Working Result
 
@@ -226,13 +226,15 @@ above.
 Install the locked environment:
 
 ```bash
-uv sync
+uv sync --locked
 ```
 
-Run the offline test suite:
+Run the offline test suite with the same coverage gate used by CI:
 
 ```bash
-uv run python -m pytest
+uv run coverage erase
+uv run coverage run --source=mmc_watershed_data -m pytest
+uv run coverage report --show-missing --fail-under=70
 ```
 
 Run formatting, linting, type checking, and package build checks:
@@ -241,10 +243,57 @@ Run formatting, linting, type checking, and package build checks:
 uv run ruff format --check .
 uv run ruff check .
 uv run mypy src
-uv build
+uv build --no-sources
 ```
 
 Tests use stable fixtures and mocks, so they do not call the live rainfall APIs.
+The 70% project threshold includes the command, API clients, validation,
+storage, workflow, analysis, and dashboard modules rather than omitting
+presentation glue to inflate the result.
+
+## Continuous Integration
+
+The [GitHub Actions CI workflow](.github/workflows/ci.yml) runs on every push,
+on pull requests targeting `main`, and by manual dispatch. It restores
+`uv.lock` with `uv sync --locked`, runs the offline coverage suite, formatting,
+linting, strict type checks, `uv build --no-sources`, and isolated package
+verification. CI has read-only repository permissions and never calls the live
+Auburn or Opelika APIs.
+
+Quarto rendering remains a documented local check because a PDF engine is an
+external system dependency. The committed report PDF must still be rendered
+and visually inspected before a release.
+
+## Package Evidence
+
+Build the exact wheel and source archive required for a release:
+
+```bash
+uv build --no-sources
+```
+
+For the version currently declared in `pyproject.toml`, the command creates:
+
+```text
+dist/mmc_watershed_data-0.7.0-py3-none-any.whl
+dist/mmc-watershed-data-0.7.0.tar.gz
+```
+
+Verify both artifacts outside the development environment:
+
+```bash
+uv run python scripts/verify_package.py
+```
+
+The verifier inspects wheel metadata, dependencies, license, console entry
+point, and bundled KMZ assets. It independently rebuilds the wheel from the
+source archive, installs the original wheel into a temporary virtual
+environment, and runs `mmc --version`, `mmc --help`, and a package import from
+outside the repository. It does not call the rainfall APIs.
+
+`dist/` is generated and ignored by Git. Attach only the two verified files for
+the exact release version to the GitHub Release. Follow the reusable
+[package release checklist](docs/package-checklist.md) before submission.
 
 ## Troubleshooting
 
@@ -291,6 +340,8 @@ Jupyter/PyYAML is unavailable, Quarto is using the wrong Python interpreter.
 
 - [Documentation map](docs/index.md)
 - [Processed data dictionary](docs/data-dictionary.md)
+- [Package release checklist](docs/package-checklist.md)
+- [GitHub Actions CI workflow](.github/workflows/ci.yml)
 - [Sprint specifications](docs/specs/)
 - [Project guidance](AGENTS.md)
 - [MIT License](LICENSE)

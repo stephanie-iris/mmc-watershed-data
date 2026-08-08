@@ -6,6 +6,9 @@ from pathlib import Path
 
 
 def project_root() -> Path:
-    """Return the repository root containing ``pyproject.toml``."""
+    """Return the repository root or current output directory when installed."""
 
-    return Path(__file__).resolve().parents[2]
+    repository_root = Path(__file__).resolve().parents[2]
+    if (repository_root / "pyproject.toml").is_file():
+        return repository_root
+    return Path.cwd()

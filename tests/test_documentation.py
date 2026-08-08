@@ -18,6 +18,8 @@ class DocumentationTests(unittest.TestCase):
             "AGENTS.md",
             "docs/index.md",
             "docs/data-dictionary.md",
+            "docs/package-checklist.md",
+            ".github/workflows/ci.yml",
             "reports/mmc-rainfall-report.qmd",
             "reports/mmc-rainfall-report.pdf",
             "reports/data/mmc_report_2026-07-01_to_2026-08-01_processed.csv",
@@ -62,6 +64,8 @@ class DocumentationTests(unittest.TestCase):
             "reports/mmc-rainfall-report.qmd",
             "reports/mmc-rainfall-report.pdf",
             "LICENSE",
+            "docs/package-checklist.md",
+            ".github/workflows/ci.yml",
         ):
             self.assertIn(link, readme)
 

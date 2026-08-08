@@ -11,22 +11,25 @@ CLI command is `mmc`; the browser interface is the Streamlit dashboard.
 Restore the environment with:
 
 ```bash
-uv sync
+uv sync --locked
 ```
 
 Run the checks before committing:
 
 ```bash
-uv run python -m pytest
+uv run coverage run --source=mmc_watershed_data -m pytest
+uv run coverage report --show-missing --fail-under=70
 uv run ruff format --check .
 uv run ruff check .
 uv run mypy src
-uv build
+uv build --no-sources
+uv run python scripts/verify_package.py
 quarto render reports/mmc-rainfall-report.qmd --to pdf
 ```
 
 The test suite is offline and uses fixtures plus mocks. Quarto and a PDF engine
 are external tools; `quarto check` diagnoses their installation.
+Package verification uses temporary environments and does not call live APIs.
 
 ## Navigation and Conventions
 
@@ -61,6 +64,9 @@ are external tools; `quarto check` diagnoses their installation.
   specifications to describe later implementation details.
 - `reports/mmc-rainfall-report.qmd` is the authoritative report source, and its
   PDF is generated output from that source.
+- `.github/workflows/ci.yml` is the authoritative automated quality gate.
+- `docs/package-checklist.md` is the source of truth for release artifact
+  verification.
 - Source docstrings and tests define code-level contracts and expected failure
   behavior.
 

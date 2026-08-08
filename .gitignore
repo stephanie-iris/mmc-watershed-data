@@ -1,6 +1,9 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 build/
 dist/
 wheels/
@@ -10,6 +13,8 @@ htmlcov/
 
 # Virtual environments
 .venv/
+.uv-cache/
+.env
 
 # Generated data
 /data/

@@ -2,7 +2,7 @@
 
 import logging
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 
 # Library imports stay quiet unless the CLI or dashboard configures handlers.

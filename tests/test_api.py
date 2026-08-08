@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import unittest
 from unittest.mock import patch
+import tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,7 +52,26 @@ class ApiTests(unittest.TestCase):
                 cli.parse_args()
 
         self.assertEqual(exc.exception.code, 0)
-        self.assertEqual(buffer.getvalue().strip(), "mmc 0.6.0")
+        project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        self.assertEqual(
+            buffer.getvalue().strip(), f"mmc {project['project']['version']}"
+        )
+
+    def test_help_describes_collection_and_spatial_outputs(self) -> None:
+        buffer = StringIO()
+        with patch.object(sys, "argv", ["mmc", "--help"]), redirect_stdout(buffer):
+            with self.assertRaises(SystemExit) as exc:
+                cli.parse_args()
+
+        self.assertEqual(exc.exception.code, 0)
+        help_text = buffer.getvalue()
+        for expected in (
+            "--start-date",
+            "--end-date",
+            "--log-file",
+            "spatial products",
+        ):
+            self.assertIn(expected, help_text)
 
 
 if __name__ == "__main__":

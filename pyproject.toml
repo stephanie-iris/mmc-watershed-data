@@ -5,10 +5,11 @@ backend-path = ["."]
 
 [project]
 name = "mmc-watershed-data"
-version = "0.6.0"
+version = "0.7.0"
 description = "Collect station rainfall and derive Thiessen-weighted MMC watershed rainfall."
 readme = "README.md"
 requires-python = ">=3.11"
+license = { file = "LICENSE" }
 dependencies = [
     "folium>=0.20.0",
     "geopandas>=1.0.0",
@@ -59,3 +60,10 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["numpy", "numpy.*", "pandas", "pandas.*", "streamlit", "streamlit.*"]
 follow_imports = "skip"
+
+[tool.coverage.run]
+source = ["mmc_watershed_data"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true

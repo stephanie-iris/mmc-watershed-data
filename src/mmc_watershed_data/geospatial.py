@@ -32,9 +32,7 @@ def load_station_points(root: Path) -> tuple[StationPoint, ...]:
         ("Auburn", "auburn_stations.kmz", AUBURN_STATIONS),
         ("Opelika", "opelika_stations.kmz", OPELIKA_STATIONS),
     ):
-        placemarks = _placemarks(
-            _read_kml(root / "assets" / "geospatial" / "stations" / filename)
-        )
+        placemarks = _placemarks(_read_kml(_asset_path(root, "stations", filename)))
         by_name = {
             name: coordinates
             for name, coordinates in placemarks
@@ -62,7 +60,7 @@ def load_watershed_boundary(root: Path) -> tuple[tuple[float, float], ...]:
     """Read the watershed polygon as ``(latitude, longitude)`` pairs."""
 
     kml_root = ElementTree.fromstring(
-        _read_kml(root / "assets" / "geospatial" / "watershed" / "mmc_boundary.kmz")
+        _read_kml(_asset_path(root, "watershed", "mmc_boundary.kmz"))
     )
     for polygon in kml_root.iter():
         if _local_name(polygon.tag) != "Polygon":
@@ -78,6 +76,15 @@ def _read_kml(path: Path) -> bytes:
 
     with ZipFile(path) as archive:
         return archive.read("doc.kml")
+
+
+def _asset_path(root: Path, category: str, filename: str) -> Path:
+    """Resolve repository assets first, then wheel-bundled geospatial assets."""
+
+    repository_path = root / "assets" / "geospatial" / category / filename
+    if repository_path.is_file():
+        return repository_path
+    return Path(__file__).parent / "assets" / "geospatial" / category / filename
 
 
 def _placemarks(kml: bytes) -> list[tuple[str, tuple[float, float] | None]]:

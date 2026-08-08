@@ -16,11 +16,13 @@ PROJECT = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
 NAME = PROJECT["name"]
 VERSION = PROJECT["version"]
 SUMMARY = PROJECT["description"]
+REQUIRES_PYTHON = PROJECT["requires-python"]
 DEPENDENCY_METADATA = [
     f"Requires-Dist: {dependency}" for dependency in PROJECT["dependencies"]
 ]
 DIST_INFO = f"mmc_watershed_data-{VERSION}.dist-info"
 SRC = ROOT / "src" / "mmc_watershed_data"
+LICENSE = ROOT / "LICENSE"
 
 
 def _wheel_name() -> str:
@@ -46,19 +48,10 @@ def get_requires_for_build_editable(config_settings=None):  # noqa: D401
 def prepare_metadata_for_build_wheel(metadata_directory, config_settings=None):
     metadata_dir = Path(metadata_directory) / DIST_INFO
     metadata_dir.mkdir(parents=True, exist_ok=True)
-    (metadata_dir / "METADATA").write_text(
-        "\n".join(
-            [
-                "Metadata-Version: 2.1",
-                f"Name: {NAME}",
-                f"Version: {VERSION}",
-                f"Summary: {SUMMARY}",
-                *DEPENDENCY_METADATA,
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
+    (metadata_dir / "METADATA").write_bytes(_metadata())
+    license_dir = metadata_dir / "licenses"
+    license_dir.mkdir(exist_ok=True)
+    (license_dir / "LICENSE").write_bytes(LICENSE.read_bytes())
     (metadata_dir / "WHEEL").write_text(
         "\n".join(
             [
@@ -80,8 +73,34 @@ def prepare_metadata_for_build_editable(metadata_directory, config_settings=None
 
 def _iter_package_files():
     for path in SRC.rglob("*"):
-        if path.is_file():
+        if path.is_file() and _is_source_file(path):
             yield path, Path("mmc_watershed_data") / path.relative_to(SRC)
+    assets = ROOT / "assets" / "geospatial"
+    for path in assets.rglob("*"):
+        if path.is_file():
+            yield (
+                path,
+                Path("mmc_watershed_data/assets/geospatial") / path.relative_to(assets),
+            )
+
+
+def _is_source_file(path: Path) -> bool:
+    return "__pycache__" not in path.parts and path.suffix not in {".pyc", ".pyo"}
+
+
+def _metadata() -> bytes:
+    return "\n".join(
+        [
+            "Metadata-Version: 2.4",
+            f"Name: {NAME}",
+            f"Version: {VERSION}",
+            f"Summary: {SUMMARY}",
+            f"Requires-Python: {REQUIRES_PYTHON}",
+            "License-File: LICENSE",
+            *DEPENDENCY_METADATA,
+            "",
+        ]
+    ).encode("utf-8")
 
 
 def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
@@ -96,16 +115,7 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
             encoded = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
             records.append((str(dest), f"sha256={encoded}", str(len(data))))
 
-        metadata = "\n".join(
-            [
-                "Metadata-Version: 2.1",
-                f"Name: {NAME}",
-                f"Version: {VERSION}",
-                f"Summary: {SUMMARY}",
-                *DEPENDENCY_METADATA,
-                "",
-            ]
-        ).encode("utf-8")
+        metadata = _metadata()
         wheel = "\n".join(
             [
                 "Wheel-Version: 1.0",
@@ -127,6 +137,7 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
             f"{DIST_INFO}/METADATA": metadata,
             f"{DIST_INFO}/WHEEL": wheel,
             f"{DIST_INFO}/entry_points.txt": entry_points,
+            f"{DIST_INFO}/licenses/LICENSE": LICENSE.read_bytes(),
         }
         for filename, data in dist_info_files.items():
             zf.writestr(filename, data)
@@ -158,16 +169,7 @@ def build_editable(wheel_directory, config_settings=None, metadata_directory=Non
         encoded = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
         records.append((pth_name, f"sha256={encoded}", str(len(pth_data))))
 
-        metadata = "\n".join(
-            [
-                "Metadata-Version: 2.1",
-                f"Name: {NAME}",
-                f"Version: {VERSION}",
-                f"Summary: {SUMMARY}",
-                *DEPENDENCY_METADATA,
-                "",
-            ]
-        ).encode("utf-8")
+        metadata = _metadata()
         wheel = "\n".join(
             [
                 "Wheel-Version: 1.0",
@@ -188,6 +190,7 @@ def build_editable(wheel_directory, config_settings=None, metadata_directory=Non
             f"{DIST_INFO}/METADATA": metadata,
             f"{DIST_INFO}/WHEEL": wheel,
             f"{DIST_INFO}/entry_points.txt": entry_points,
+            f"{DIST_INFO}/licenses/LICENSE": LICENSE.read_bytes(),
         }
         for filename, data in dist_info_files.items():
             zf.writestr(filename, data)
@@ -211,15 +214,47 @@ def build_sdist(sdist_directory, config_settings=None):
     with tarfile.open(sdist_path, "w:gz") as tf:
         base = Path(f"mmc-watershed-data-{VERSION}")
         for relative in [
+            Path(".python-version"),
+            Path("CHANGELOG.md"),
+            Path("LICENSE"),
             Path("pyproject.toml"),
             Path("README.md"),
             Path("AGENTS.md"),
-            Path("sitecustomize.py"),
             Path("build_backend.py"),
+            Path("uv.lock"),
         ]:
             path = ROOT / relative
             if path.exists():
                 tf.add(path, arcname=str(base / relative))
-        for source, dest in _iter_package_files():
-            tf.add(source, arcname=str(base / Path("src") / dest))
+        for directory in (
+            ".github",
+            "assets",
+            "docs",
+            "reports",
+            "scripts",
+            "src",
+            "tests",
+        ):
+            source_root = ROOT / directory
+            if not source_root.exists():
+                continue
+            for source in source_root.rglob("*"):
+                if source.is_file() and _include_in_sdist(source):
+                    tf.add(source, arcname=str(base / source.relative_to(ROOT)))
     return sdist_path.name
+
+
+def _include_in_sdist(path: Path) -> bool:
+    excluded_parts = {
+        "__pycache__",
+        ".ipynb_checkpoints",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".quarto-local",
+    }
+    return not excluded_parts.intersection(path.parts) and path.suffix not in {
+        ".pyc",
+        ".pyo",
+        ".log",
+    }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 - 2026-08-07
+
+Added the Sprint 7 final-delivery safeguards and reproducible package evidence.
+
+- Added read-only GitHub Actions CI for locked installation, offline coverage, formatting, linting, type checking, package builds, and isolated artifact verification.
+- Made the wheel independently usable by bundling the license and geospatial KMZ assets, and made the source archive self-contained for rebuilding.
+- Added a release checklist, package verification script, 70% coverage gate, and repository-hygiene tests; removed the tracked notebook checkpoint.
+- Updated the README, project guidance, documentation map, and package metadata for the final release workflow.
+
 ## 0.6.0 - 2026-08-07
 
 Added the Sprint 6 Thiessen watershed-rainfall release for hydrologic modeling.
